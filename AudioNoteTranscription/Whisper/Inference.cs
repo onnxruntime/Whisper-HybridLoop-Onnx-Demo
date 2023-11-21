@@ -117,6 +117,8 @@ namespace AudioNoteTranscription.Whisper
         {
             // Create a new DenseTensor with the desired shape
 
+            var language = ALL_LANGUAGE_TOKENS.First(kv => kv.Value == "en").Key; /*ru*/
+
             var input = new List<NamedOnnxValue> {
                  NamedOnnxValue.CreateFromTensor("audio_stream", config.audio),
                 NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] {config.min_length}, new int[] { 1 })),
@@ -125,7 +127,7 @@ namespace AudioNoteTranscription.Whisper
                 NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] {config.num_return_sequences}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] {config.length_penalty}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] {config.repetition_penalty}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , 50263 /*ru*/, 50359, 50363 }, new int[] { 1, 4 } ))
+                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , language, 50359, 50363 }, new int[] { 1, 4 } ))
                 };
 
             return input;
