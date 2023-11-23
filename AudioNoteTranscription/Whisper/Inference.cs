@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NAudio.Wave;
@@ -119,7 +120,7 @@ namespace AudioNoteTranscription.Whisper
         {
             // Create a new DenseTensor with the desired shape
 
-            var language = ALL_LANGUAGE_TOKENS.First(kv => kv.Value == "en").Key; /*ru*/
+            var language = ALL_LANGUAGE_TOKENS.First(kv => kv.Value == "ru").Key; /*ru*/
 
             var input = new List<NamedOnnxValue> {
                  NamedOnnxValue.CreateFromTensor("audio_pcm", config.audio),
@@ -129,23 +130,16 @@ namespace AudioNoteTranscription.Whisper
                 NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] {config.num_return_sequences}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] {config.length_penalty}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] {config.repetition_penalty}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , language, 50359, 50363 }, new int[] { 1, 4 } ))
+                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , language, 50359, 50361, 50363 }, new int[] { 1, 5 } ))
                 };
 
             return input;
-
         }
+
         public static string Run(WhisperConfig config)
         {
             // load audio and pad/trim it to fit 30 seconds
             float[] pcmAudioData = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate);
-            //byte[] audoDataRaw2 = LoadAudioFileRaw(config.TestAudioPath);
-            // Create audio data tensor of shape [1,480000]
-
-
-            //byte[] audoDataRaw = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate).ToArray();
-            //config.audio = new DenseTensor<byte>(audoDataRaw, new[] { 1, audoDataRaw.Length });
-
 
             // Run inference
             var run_options = new RunOptions();
@@ -153,24 +147,23 @@ namespace AudioNoteTranscription.Whisper
             var sessionOptions = config.GetSessionOptionsForEp();
             sessionOptions.RegisterOrtExtensions();
 
+            StringBuilder stringBuilder = new StringBuilder();
 
-            string stringOutput = string.Empty;
             using (var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions))
             {
-
                 foreach (var audio in pcmAudioData.Chunk(480000))
                 {
                     config.audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
                     var input = CreateOnnxWhisperModelInput(config);
                     var result = session.Run(input, ["str"], run_options);
 
-                    stringOutput += (result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty;
+                    stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
                 }
             }
 
             sessionOptions.Dispose();
 
-            return stringOutput;
+            return stringBuilder.ToString();
         }
         public static byte[] LoadAudioFileRaw(string file)
         {

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -63,6 +61,9 @@ namespace AudioNoteTranscription.Whisper
                     return sessionOptions;
                 case ExecutionProvider.Cpu:
                     sessionOptions.AppendExecutionProvider_CPU();
+                    return sessionOptions;
+                case ExecutionProvider.Cuda:
+                    sessionOptions.AppendExecutionProvider_CUDA();
                     return sessionOptions;
                 default:
                     sessionOptions.AppendExecutionProvider_CPU();
