@@ -1,12 +1,8 @@
-﻿using AudioNoteTranscription.Common;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using AudioNoteTranscription.Common;
 using AudioNoteTranscription.Whisper;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AudioNoteTranscription.Model
 {
@@ -16,7 +12,7 @@ namespace AudioNoteTranscription.Model
         public TranscriptionModel() { } 
 
         //Add await once is all hooked.
-        public async Task<string> TranscribeAsync(string audioFilePath, bool useCloudInference)
+        public async Task<string> TranscribeAsync(string audioFilePath, string language)
         {
             // check file was selected.
             if (string.IsNullOrEmpty(audioFilePath))
@@ -29,8 +25,9 @@ namespace AudioNoteTranscription.Model
                 var config = new WhisperConfig();
                 config.SetModelPaths();
                 config.TestAudioPath = audioFilePath;
+                config.Language = language;
 
-                var whisperResult = Whisper.Inference.Run(config, useCloudInference);
+                var whisperResult = Inference.Run(config);
                 Console.WriteLine(whisperResult);
                 return whisperResult;
 
@@ -54,8 +51,6 @@ namespace AudioNoteTranscription.Model
 
                 File.WriteAllText(path, content);
             });
-
-            return;
         }
     }
 }

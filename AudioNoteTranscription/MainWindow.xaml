@@ -37,7 +37,7 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Margin" Value="10" />
         </Style>
-        
+
         <FontFamily x:Key="SymbolFontFamily">Segoe MDL2 Assets</FontFamily>
         <Style x:Key="CircularButton" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
@@ -67,7 +67,7 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="buttonBorder" Property="Stroke" Value="#E1E1E1" />
                             </Trigger>
-                            
+
                             <Trigger Property="IsEnabled" Value="True">
                                 <Setter TargetName="buttonContent" Property="RenderTransform" >
                                     <Setter.Value>
@@ -114,14 +114,14 @@
                                     <TextBlock x:Name="onText" Text="On" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <Border x:Name="off" Width="25" Height="25" Background="LightGray" CornerRadius="0,2,4,0">
-                                <TextBlock x:Name="offText" Text="Off" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
+                                    <TextBlock x:Name="offText" Text="Off" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                                   Margin="{TemplateBinding Padding}" 
                                                   RecognizesAccessKey="True" 
                                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                        </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsEnabled" Value="false">
@@ -150,12 +150,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" 
+        <StackPanel 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" 
-                    Margin="10">
-            
+                    VerticalAlignment="Center" Width="375">
+
             <Button x:Name="loadButton"
                     Content="Load" 
                     Margin="10" 
@@ -174,11 +173,9 @@
                     ClickMode="Press"
                     Command="{Binding SaveCommand}"
                     Style="{StaticResource ActionButtonStyle}" />
-            <ToggleButton x:Name="cloudInference"
-                          Margin="5,10,5,10" 
-                          Content="Cloud Inference"
-                          IsChecked="{Binding UseCloudInference}"
-                          Style="{StaticResource ToggleButtonStyle}"/>
+            <ComboBox Width="102" Height="30"
+                      ItemsSource="{Binding Languages}"
+                      SelectedValue="{Binding SelectedLanguage}"/>
 
         </StackPanel>
         <Grid Grid.Row="1">

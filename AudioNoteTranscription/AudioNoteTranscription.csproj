@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<NoWarn>NU1605</NoWarn>
@@ -16,19 +16,38 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Azure" Version="1.15.0-rc" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Extensions" Version="0.8.0-beta" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.15.0-rc" />
-		<PackageReference Include="NReco.VideoConverter" Version="1.2.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Extensions" Version="0.9.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.16.3" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.16.3" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
+		<PackageReference Include="NAudio.Core" Version="2.2.1" />
+		<PackageReference Include="NReco.VideoConverter" Version="1.2.1" />
+		<PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <None Update="Onnx\model.onnx">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Onnx\whisper_cpu_int8_model.onnx">
+	  <None Update="Onnx\model.onnx">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
+	  <None Update="Onnx\whisper-small-ml-float\whisper_cpu_int8_cpu-cpu_model.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Onnx\whisper-small-ml-float\whisper_cpu_int8_cpu-cpu_model.onnx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Onnx\whisper-tiny-ml-float\whisper_cpu_int8_cpu-cpu_model.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Onnx\whisper-tiny-ml-float\whisper_cpu_int8_cpu-cpu_model.onnx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Onnx\" />
 	</ItemGroup>
 
 </Project>
