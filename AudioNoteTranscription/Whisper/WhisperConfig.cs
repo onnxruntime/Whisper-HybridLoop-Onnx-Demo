@@ -21,10 +21,10 @@ namespace AudioNoteTranscription.Whisper
         // Max length per inference
         public int max_length = 448;
         public float repetition_penalty = 1.0f;
-        public int no_repeat_ngram_size = 3;
+        public int no_repeat_ngram_size = 1;
         public int num_beams = 1;
         public int num_return_sequences = 1;
-        public float length_penalty = 1.0f;
+        public float length_penalty = 0.2f;
         public Tensor<int> attention_mask;
         public DenseTensor<float> audio;
 
@@ -33,6 +33,7 @@ namespace AudioNoteTranscription.Whisper
         public int sampleRate = 16000;
         public int nMels = 80;
 
+        public string Language = "en";
         public string WhisperOnnxPath = "";
         public string TestAudioPath = "";
 

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using AudioNoteTranscription.Common;
 using AudioNoteTranscription.Model;
+using AudioNoteTranscription.Whisper;
 
 namespace AudioNoteTranscription.ViewModel
 {
@@ -20,7 +23,7 @@ namespace AudioNoteTranscription.ViewModel
                 async (obj) => {
                     redy = false;
                     Transcription = String.Empty;
-                    Transcription = await _model.TranscribeAsync(_audioFileName);
+                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage);
                     redy = true;
                 }, (obj) => redy);
         }
@@ -72,5 +75,15 @@ namespace AudioNoteTranscription.ViewModel
             get => _model;
             set => SetProperty(ref _model, value);
         }
+
+        private string _selectedLanguage = "en";
+
+        public string SelectedLanguage
+        {
+            get => _selectedLanguage;
+            set => SetProperty(ref _selectedLanguage, value);
+        }
+
+        public string[] Languages => Inference.ALL_LANGUAGE_TOKENS.Keys.ToArray();
     }
 }
