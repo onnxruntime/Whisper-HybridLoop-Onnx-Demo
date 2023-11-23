@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using AudioNoteTranscription.Common;
 using AudioNoteTranscription.Model;
 
@@ -10,6 +6,7 @@ namespace AudioNoteTranscription.ViewModel
 {
     public class TranscriptionViewModel : ModelBase
     {
+        bool redy = true; 
         public TranscriptionViewModel(TranscriptionModel model)
         {
             _model = model;
@@ -21,9 +18,11 @@ namespace AudioNoteTranscription.ViewModel
                 async (obj) => await _model.StoreTranascription(_noteName, _transcription), (obj) => true);
             _transcribeCommand = new CommandBase<object>(
                 async (obj) => {
+                    redy = false;
                     Transcription = String.Empty;
-                    Transcription = await _model.TranscribeAsync(_audioFileName, _useCloudInference);
-                }, (obj) => true);
+                    Transcription = await _model.TranscribeAsync(_audioFileName);
+                    redy = true;
+                }, (obj) => redy);
         }
 
 		private CommandBase<object> _transcribeCommand;
@@ -64,13 +63,6 @@ namespace AudioNoteTranscription.ViewModel
         {
             get => _audioFileName;
             set => SetProperty(ref _audioFileName, value);
-        }
-
-        private bool _useCloudInference;
-        public bool UseCloudInference
-        {
-            get => _useCloudInference;
-            set => SetProperty(ref _useCloudInference, value);
         }
 
         private TranscriptionModel _model;

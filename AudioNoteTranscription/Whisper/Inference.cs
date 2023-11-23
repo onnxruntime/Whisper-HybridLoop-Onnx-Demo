@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using NReco.VideoConverter;
 
 namespace AudioNoteTranscription.Whisper
@@ -120,7 +122,7 @@ namespace AudioNoteTranscription.Whisper
             var language = ALL_LANGUAGE_TOKENS.First(kv => kv.Value == "en").Key; /*ru*/
 
             var input = new List<NamedOnnxValue> {
-                 NamedOnnxValue.CreateFromTensor("audio_stream", config.audio),
+                 NamedOnnxValue.CreateFromTensor("audio_pcm", config.audio),
                 NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] {config.min_length}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] {config.max_length}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] {config.num_beams}, new int[] { 1 })),
@@ -133,57 +135,55 @@ namespace AudioNoteTranscription.Whisper
             return input;
 
         }
-        public static string Run(WhisperConfig config, bool useCloudInference)
+        public static string Run(WhisperConfig config)
         {
             // load audio and pad/trim it to fit 30 seconds
-            // float[] pcmAudioData = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate);
-            byte[] audoDataRaw = LoadAudioFileRaw(config.TestAudioPath);
+            float[] pcmAudioData = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate);
+            //byte[] audoDataRaw2 = LoadAudioFileRaw(config.TestAudioPath);
             // Create audio data tensor of shape [1,480000]
-            // config.audio = new DenseTensor<float>(pcmAudioData, new[] { 1, pcmAudioData.Length });
-            config.audio = new DenseTensor<byte>(audoDataRaw, new[] { 1, audoDataRaw.Length });
-            // Create tensor of zeros with shape [1,80,3000]
-            config.attention_mask = new DenseTensor<int>(new[] { 1, config.nMels, config.nFrames });
-
-            var input = CreateOnnxWhisperModelInput(config);
 
 
-            // Check for internet connection
-            // var isConnectivity = CheckForInternetConnection();
+            //byte[] audoDataRaw = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate).ToArray();
+            //config.audio = new DenseTensor<byte>(audoDataRaw, new[] { 1, audoDataRaw.Length });
+
 
             // Run inference
             var run_options = new RunOptions();
-
-            if (useCloudInference)
-            {
-                config.ExecutionProviderTarget = WhisperConfig.ExecutionProvider.Azure;
-                run_options.AddRunConfigEntry("use_azure", "1");
-                run_options.AddRunConfigEntry("azure.auth_key", "");
-            }
             // Set EP
             var sessionOptions = config.GetSessionOptionsForEp();
             sessionOptions.RegisterOrtExtensions();
 
 
-            var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
+            string stringOutput = string.Empty;
+            using (var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions))
+            {
 
-            List<string> outputs = new List<string>() { "str" };
-            var result = session.Run(input, outputs, run_options);
+                foreach (var audio in pcmAudioData.Chunk(480000))
+                {
+                    config.audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
+                    var input = CreateOnnxWhisperModelInput(config);
+                    var result = session.Run(input, ["str"], run_options);
 
-            var stringOutput = (result.ToList().First().Value as IEnumerable<string>).ToArray();
+                    stringOutput += (result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty;
+                }
+            }
 
-            return stringOutput[0];
+            sessionOptions.Dispose();
+
+            return stringOutput;
         }
         public static byte[] LoadAudioFileRaw(string file)
         {
             byte[] buff = null;
-            FileStream fs = new FileStream(file,
-                                           FileMode.Open,
-                                           FileAccess.Read);
-            BinaryReader br = new BinaryReader(fs);
+            using FileStream fs = new FileStream(file,
+                                             FileMode.Open,
+                                             FileAccess.Read);
+            using BinaryReader br = new BinaryReader(fs);
             long numBytes = new FileInfo(file).Length;
             buff = br.ReadBytes((int)numBytes);
             return buff;
         }
+
 
         public static float[] LoadAndProcessAudioFile(string file, int sampleRate)
         {
@@ -204,7 +204,7 @@ namespace AudioNoteTranscription.Whisper
                                     AudioSampleRate = sampleRate,
                                     // Convert to mono
                                     CustomOutputArgs = "-ac 1"
-                                }); ;
+                                });
             var buffer = output.ToArray();
             //The buffer length is divided by 2 because each sample in
             //the raw PCM format is encoded as a signed 16-bit integer,
@@ -231,32 +231,78 @@ namespace AudioNoteTranscription.Whisper
             {
                 Array.Resize(ref result, result.Length + paddingLength);
             }
-            else
-            {
-                //TODO: batch audio files that are longer than 30 seconds
-                // Cut off anything over 30 seconds
-                Array.Resize(ref result, 480000);
-            }
+            //else
+            //{
+            //    //TODO: batch audio files that are longer than 30 seconds
+            //    // Cut off anything over 30 seconds
+            //    Array.Resize(ref result, 480000);
+            //}
 
             return result;
         }
 
-        public static bool CheckForInternetConnection(int timeoutMs = 3000)
+
+
+        //public static IEnumerable<byte> LoadAndProcessAudioFile(string file, int sampleRate)
+        //{
+        //    var ffmpeg = new FFMpegConverter();
+        //    var output = new MemoryStream();
+
+        //    var extension = System.IO.Path.GetExtension(file).Substring(1);
+
+        //    // Convert to PCM
+        //    ffmpeg.ConvertMedia(inputFile: file,
+        //                        inputFormat: extension,
+        //                        outputStream: output,
+        //                        //  DE s16le PCM signed 16-bit little-endian
+        //                        outputFormat: "s16le",
+        //                        new ConvertSettings()
+        //                        {
+        //                            AudioCodec = "pcm_s16le",
+        //                            AudioSampleRate = sampleRate,
+        //                            // Convert to mono
+        //                            CustomOutputArgs = "-ac 1"
+        //                        });
+        //    var resalt = output.ToArray();
+        //    var waveFormat = new WaveFormat(sampleRate, 16, 1);
+        //    IWaveProvider provider = new RawSourceWaveStream(output, waveFormat);
+
+        //    var sampleProvider = provider.ToSampleProvider();
+
+
+        //   var first = sampleProvider.Take(TimeSpan.FromSeconds(30)).ToWaveProvider();
+
+
+        //    var writer =  new WaveFileWriter(outputWav, waveFormat);
+
+        //    writer.Write(first);
+        //    writer.Flush();
+
+
+        //    return outputWav.ToArray();
+
+
+        //}
+
+    }
+
+    class CustomWaveFormat : WaveFormat
+    {
+        public CustomWaveFormat(int rate, int bits, int channels)
+            : base(rate, bits, channels)
         {
-            try
-            {
-                var url = "https://www.bing.com/";
-                var request = (HttpWebRequest)WebRequest.Create(url);
-                request.KeepAlive = false;
-                request.Timeout = timeoutMs;
-                using (var response = (HttpWebResponse)request.GetResponse())
-                    return true;
-            }
-            catch
-            {
-                return false;
-            }
+            extraSize = 0;
         }
 
+        public override void Serialize(BinaryWriter writer)
+        {
+            writer.Write((int)16); // wave format length
+            writer.Write((short)Encoding);
+            writer.Write((short)Channels);
+            writer.Write((int)SampleRate);
+            writer.Write((int)AverageBytesPerSecond);
+            writer.Write((short)BlockAlign);
+            writer.Write((short)BitsPerSample);
+        }
     }
 }

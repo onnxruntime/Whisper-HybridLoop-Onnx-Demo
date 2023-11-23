@@ -174,11 +174,6 @@
                     ClickMode="Press"
                     Command="{Binding SaveCommand}"
                     Style="{StaticResource ActionButtonStyle}" />
-            <ToggleButton x:Name="cloudInference"
-                          Margin="5,10,5,10" 
-                          Content="Cloud Inference"
-                          IsChecked="{Binding UseCloudInference}"
-                          Style="{StaticResource ToggleButtonStyle}"/>
 
         </StackPanel>
         <Grid Grid.Row="1">
