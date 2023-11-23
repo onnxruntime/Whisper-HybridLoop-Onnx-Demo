@@ -142,27 +142,23 @@ namespace AudioNoteTranscription.Whisper
             float[] pcmAudioData = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate);
 
             // Run inference
-            var run_options = new RunOptions();
+            using var run_options = new RunOptions();
             // Set EP
-            var sessionOptions = config.GetSessionOptionsForEp();
-            sessionOptions.RegisterOrtExtensions();
+            using var sessionOptions = config.GetSessionOptionsForEp();
+            
 
-            StringBuilder stringBuilder = new StringBuilder();
+            StringBuilder stringBuilder = new();
 
-            using (var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions))
+            using var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
+
+            foreach (var audio in pcmAudioData.Chunk(480000))
             {
-                foreach (var audio in pcmAudioData.Chunk(480000))
-                {
-                    config.audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
-                    var input = CreateOnnxWhisperModelInput(config);
-                    var result = session.Run(input, ["str"], run_options);
+                config.audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
+                var input = CreateOnnxWhisperModelInput(config);
+                var result = session.Run(input, ["str"], run_options);
 
-                    stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
-                }
+                stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
             }
-
-            sessionOptions.Dispose();
-            run_options.Dispose();
 
             return stringBuilder.ToString();
         }

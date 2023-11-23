@@ -59,17 +59,20 @@ namespace AudioNoteTranscription.Whisper
                     sessionOptions.EnableMemoryPattern = false;
                     sessionOptions.AppendExecutionProvider_DML(DeviceId);
                     sessionOptions.AppendExecutionProvider_CPU();
-                    return sessionOptions;
+                    break;
                 case ExecutionProvider.Cpu:
                     sessionOptions.AppendExecutionProvider_CPU();
-                    return sessionOptions;
+                    break;
                 case ExecutionProvider.Cuda:
                     sessionOptions.AppendExecutionProvider_CUDA();
-                    return sessionOptions;
+                    break;
                 default:
                     sessionOptions.AppendExecutionProvider_CPU();
-                    return sessionOptions;
+                    break;
             }
+
+            sessionOptions.RegisterOrtExtensions();
+            return sessionOptions;
 
         }
     }
