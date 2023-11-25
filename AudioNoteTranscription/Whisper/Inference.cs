@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 using NReco.VideoConverter;
 
 namespace AudioNoteTranscription.Whisper
@@ -122,14 +119,16 @@ namespace AudioNoteTranscription.Whisper
 
             var language = ALL_LANGUAGE_TOKENS[config.Language]; /*ru*/
 
+            var modelConfig = config.ModelConfig.config.model_attributes;
+
             var input = new List<NamedOnnxValue> {
-                 NamedOnnxValue.CreateFromTensor("audio_pcm", config.audio),
-                NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] {config.min_length}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] {config.max_length}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] {config.num_beams}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] {config.num_return_sequences}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] {config.length_penalty}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] {config.repetition_penalty}, new int[] { 1 })),
+                 NamedOnnxValue.CreateFromTensor("audio_pcm", config.Audio),
+                NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] { modelConfig.min_length}, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length}, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] { modelConfig.num_beams}, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] { modelConfig.num_return_sequences}, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] { modelConfig.length_penalty}, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] { modelConfig.repetition_penalty}, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , language, 50359, 50363 }, new int[] { 1, 4 } ))
                 };
 
@@ -139,7 +138,7 @@ namespace AudioNoteTranscription.Whisper
         public static string Run(WhisperConfig config)
         {
             // load audio and pad/trim it to fit 30 seconds
-            float[] pcmAudioData = LoadAndProcessAudioFile(config.TestAudioPath, config.sampleRate);
+            float[] pcmAudioData = LoadAndProcessAudioFile(config.AudioPath, config.SampleRate);
 
             // Run inference
             using var run_options = new RunOptions();
@@ -153,7 +152,7 @@ namespace AudioNoteTranscription.Whisper
 
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
-                config.audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
+                config.Audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
                 var input = CreateOnnxWhisperModelInput(config);
                 var result = session.Run(input, ["str"], run_options);
 
@@ -162,18 +161,6 @@ namespace AudioNoteTranscription.Whisper
 
             return stringBuilder.ToString();
         }
-        public static byte[] LoadAudioFileRaw(string file)
-        {
-            byte[] buff = null;
-            using FileStream fs = new FileStream(file,
-                                             FileMode.Open,
-                                             FileAccess.Read);
-            using BinaryReader br = new BinaryReader(fs);
-            long numBytes = new FileInfo(file).Length;
-            buff = br.ReadBytes((int)numBytes);
-            return buff;
-        }
-
 
         public static float[] LoadAndProcessAudioFile(string file, int sampleRate)
         {
@@ -221,78 +208,10 @@ namespace AudioNoteTranscription.Whisper
             {
                 Array.Resize(ref result, result.Length + paddingLength);
             }
-            //else
-            //{
-            //    //TODO: batch audio files that are longer than 30 seconds
-            //    // Cut off anything over 30 seconds
-            //    Array.Resize(ref result, 480000);
-            //}
 
             return result;
         }
 
 
-
-        //public static IEnumerable<byte> LoadAndProcessAudioFile(string file, int sampleRate)
-        //{
-        //    var ffmpeg = new FFMpegConverter();
-        //    var output = new MemoryStream();
-
-        //    var extension = System.IO.Path.GetExtension(file).Substring(1);
-
-        //    // Convert to PCM
-        //    ffmpeg.ConvertMedia(inputFile: file,
-        //                        inputFormat: extension,
-        //                        outputStream: output,
-        //                        //  DE s16le PCM signed 16-bit little-endian
-        //                        outputFormat: "s16le",
-        //                        new ConvertSettings()
-        //                        {
-        //                            AudioCodec = "pcm_s16le",
-        //                            AudioSampleRate = sampleRate,
-        //                            // Convert to mono
-        //                            CustomOutputArgs = "-ac 1"
-        //                        });
-        //    var resalt = output.ToArray();
-        //    var waveFormat = new WaveFormat(sampleRate, 16, 1);
-        //    IWaveProvider provider = new RawSourceWaveStream(output, waveFormat);
-
-        //    var sampleProvider = provider.ToSampleProvider();
-
-
-        //   var first = sampleProvider.Take(TimeSpan.FromSeconds(30)).ToWaveProvider();
-
-
-        //    var writer =  new WaveFileWriter(outputWav, waveFormat);
-
-        //    writer.Write(first);
-        //    writer.Flush();
-
-
-        //    return outputWav.ToArray();
-
-
-        //}
-
-    }
-
-    class CustomWaveFormat : WaveFormat
-    {
-        public CustomWaveFormat(int rate, int bits, int channels)
-            : base(rate, bits, channels)
-        {
-            extraSize = 0;
-        }
-
-        public override void Serialize(BinaryWriter writer)
-        {
-            writer.Write((int)16); // wave format length
-            writer.Write((short)Encoding);
-            writer.Write((short)Channels);
-            writer.Write((int)SampleRate);
-            writer.Write((int)AverageBytesPerSecond);
-            writer.Write((short)BlockAlign);
-            writer.Write((short)BitsPerSample);
-        }
     }
 }

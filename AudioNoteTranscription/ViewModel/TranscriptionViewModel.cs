@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using AudioNoteTranscription.Common;
 using AudioNoteTranscription.Model;
@@ -12,6 +13,7 @@ namespace AudioNoteTranscription.ViewModel
         bool redy = true; 
         public TranscriptionViewModel(TranscriptionModel model)
         {
+            _modelPath = Directory.GetDirectories(Path.Combine(Directory.GetCurrentDirectory(), "Onnx")).First();
             _model = model;
             _noteName = "Placeholder.txt";
             _transcription = "Please select an audio file to transcribe.";
@@ -23,7 +25,7 @@ namespace AudioNoteTranscription.ViewModel
                 async (obj) => {
                     redy = false;
                     Transcription = String.Empty;
-                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage);
+                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath);
                     redy = true;
                 }, (obj) => redy);
         }
@@ -85,5 +87,13 @@ namespace AudioNoteTranscription.ViewModel
         }
 
         public string[] Languages => Inference.ALL_LANGUAGE_TOKENS.Keys.ToArray();
+
+
+        private string _modelPath;
+        public string ModelPath
+        {
+            get => _modelPath;
+            set => SetProperty(ref _modelPath, value);
+        }
     }
 }

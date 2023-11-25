@@ -61,5 +61,19 @@ namespace AudioNoteTranscription
             mediaElement.Position -= TimeSpan.FromSeconds(10);
         }
         #endregion
+
+        private void loadModelButton_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFolderDialog
+            {
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                //send file to the viewmodel
+                string folderPath = openFileDialog.FolderName;
+                ((TranscriptionViewModel)DataContext).ModelPath = folderPath;
+            }
+        }
     }
 }

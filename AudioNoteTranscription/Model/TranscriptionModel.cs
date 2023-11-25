@@ -12,7 +12,7 @@ namespace AudioNoteTranscription.Model
         public TranscriptionModel() { } 
 
         //Add await once is all hooked.
-        public async Task<string> TranscribeAsync(string audioFilePath, string language)
+        public async Task<string> TranscribeAsync(string audioFilePath, string language, string modelPath)
         {
             // check file was selected.
             if (string.IsNullOrEmpty(audioFilePath))
@@ -22,10 +22,7 @@ namespace AudioNoteTranscription.Model
 
             var result = await Task.Run(string () =>
             {
-                var config = new WhisperConfig();
-                config.SetModelPaths();
-                config.TestAudioPath = audioFilePath;
-                config.Language = language;
+                var config = new WhisperConfig(modelPath, audioFilePath, language);
 
                 var whisperResult = Inference.Run(config);
                 Console.WriteLine(whisperResult);

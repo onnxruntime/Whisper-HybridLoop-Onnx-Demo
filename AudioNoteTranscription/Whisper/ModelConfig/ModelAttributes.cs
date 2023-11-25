@@ -59,8 +59,8 @@ namespace AudioNoteTranscription.Whisper.ModelConfig
         public int top_k { get; set; }
         public double top_p { get; set; }
         public double typical_p { get; set; }
-        public double repetition_penalty { get; set; }
-        public double length_penalty { get; set; }
+        public float repetition_penalty { get; set; }
+        public float length_penalty { get; set; }
         public int no_repeat_ngram_size { get; set; }
         public int encoder_no_repeat_ngram_size { get; set; }
         public object bad_words_ids { get; set; }
