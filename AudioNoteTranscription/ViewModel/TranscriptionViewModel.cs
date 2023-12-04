@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AudioNoteTranscription.Common;
@@ -10,11 +9,13 @@ namespace AudioNoteTranscription.ViewModel
 {
     public class TranscriptionViewModel : ModelBase
     {
-        bool redy = true; 
+        bool redy = true;
         public TranscriptionViewModel(TranscriptionModel model)
         {
             _modelPath = Directory.GetDirectories(Path.Combine(Directory.GetCurrentDirectory(), "Onnx")).First();
             _model = model;
+            _model.MessageRecognized += _model_MessageRecognized;
+
             _noteName = "Placeholder.txt";
             _transcription = "Please select an audio file to transcribe.";
             _audioFileName = String.Empty;
@@ -22,21 +23,30 @@ namespace AudioNoteTranscription.ViewModel
             _saveCommand = new CommandBase<object>(
                 async (obj) => await _model.StoreTranascription(_noteName, _transcription), (obj) => true);
             _transcribeCommand = new CommandBase<object>(
-                async (obj) => {
+                async (obj) =>
+                {
                     redy = false;
                     Transcription = String.Empty;
-                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath);
+
+                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath, IsRealtime);
+
+
                     redy = true;
                 }, (obj) => redy);
         }
 
-		private CommandBase<object> _transcribeCommand;
+        private void _model_MessageRecognized(object? sender, EventArgs e)
+        {
+            Transcription = (e as MessageRecognizedEventArgs)?.RecognizedText ?? string.Empty;
+        }
 
-		public CommandBase<object> TranscribeCommand
-		{
-			get => _transcribeCommand;
-			set => SetProperty(ref _transcribeCommand, value);
-		}
+        private CommandBase<object> _transcribeCommand;
+
+        public CommandBase<object> TranscribeCommand
+        {
+            get => _transcribeCommand;
+            set => SetProperty(ref _transcribeCommand, value);
+        }
 
         private CommandBase<object> _saveCommand;
 
@@ -94,6 +104,14 @@ namespace AudioNoteTranscription.ViewModel
         {
             get => _modelPath;
             set => SetProperty(ref _modelPath, value);
+        }
+
+        private bool _isRealtime;
+
+        public bool IsRealtime
+        {
+            get => _isRealtime;
+            set => SetProperty(ref _isRealtime, value);
         }
     }
 }

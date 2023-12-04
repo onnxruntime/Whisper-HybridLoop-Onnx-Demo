@@ -16,7 +16,7 @@ namespace AudioNoteTranscription.Whisper
         }
 
         private readonly string _modelPath;
-        private ExecutionProvider ExecutionProviderTarget { get; set; } = ExecutionProvider.Cpu;
+        private ExecutionProvider ExecutionProviderTarget { get; set; } = ExecutionProvider.Cuda;
 
         public ModelConfig.Config ModelConfig { get; private set; }
         public string WhisperOnnxPath { get; private set; }
@@ -46,7 +46,7 @@ namespace AudioNoteTranscription.Whisper
 
             var config = System.Text.Json.JsonSerializer.Deserialize<ModelConfig.Config>(jsonString);
 
-            return config ?? new Whisper.ModelConfig.Config();
+            return config ?? new ModelConfig.Config();
         }
 
         public string SetModelPaths()
@@ -82,6 +82,7 @@ namespace AudioNoteTranscription.Whisper
             }
 
             sessionOptions.RegisterOrtExtensions();
+            sessionOptions.EnableCpuMemArena = true;
             return sessionOptions;
 
         }

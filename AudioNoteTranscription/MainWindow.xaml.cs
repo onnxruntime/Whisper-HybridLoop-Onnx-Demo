@@ -26,6 +26,7 @@ namespace AudioNoteTranscription
         {
             var openFileDialog = new OpenFileDialog
             {
+                DefaultDirectory = AppDomain.CurrentDomain.BaseDirectory,
             };
 
             if (openFileDialog.ShowDialog() == true)
@@ -66,6 +67,7 @@ namespace AudioNoteTranscription
         {
             var openFileDialog = new OpenFolderDialog
             {
+                 DefaultDirectory = AppDomain.CurrentDomain.BaseDirectory,
             };
 
             if (openFileDialog.ShowDialog() == true)
@@ -74,6 +76,11 @@ namespace AudioNoteTranscription
                 string folderPath = openFileDialog.FolderName;
                 ((TranscriptionViewModel)DataContext).ModelPath = folderPath;
             }
+        }
+
+        private void textTranscriber_TargetUpdated(object sender, System.Windows.Data.DataTransferEventArgs e)
+        {
+            textTranscriber.ScrollToEnd();
         }
     }
 }

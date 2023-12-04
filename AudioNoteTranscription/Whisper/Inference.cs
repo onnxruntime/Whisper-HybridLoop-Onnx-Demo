@@ -1,16 +1,31 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using AudioNoteTranscription.Whisper.ModelConfig;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NReco.VideoConverter;
 
 namespace AudioNoteTranscription.Whisper
 {
-    public static class Inference
+    public class MessageRecognizedEventArgs : EventArgs
     {
+        public string RecognizedText { get; set; }
+    }
+    public class Inference
+    {
+        private string MessaeResult;
+        public event EventHandler? MessageRecognized;
+
+        protected virtual void OnMessageRecognized(MessageRecognizedEventArgs e)
+        {
+            MessageRecognized?.Invoke(this, e);
+        }
         public static Dictionary<string, int> ALL_LANGUAGE_TOKENS => new Dictionary<string, int>
         {
             { "en", 50259 },
@@ -113,7 +128,7 @@ namespace AudioNoteTranscription.Whisper
             { "jw", 50356 },
             { "su", 50357 }
         };
-        public static List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config)
+        public static List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config, float[] audio)
         {
             // Create a new DenseTensor with the desired shape
 
@@ -122,41 +137,139 @@ namespace AudioNoteTranscription.Whisper
             var modelConfig = config.ModelConfig.config.model_attributes;
 
             var input = new List<NamedOnnxValue> {
-                 NamedOnnxValue.CreateFromTensor("audio_pcm", config.Audio),
-                NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] { modelConfig.min_length}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] { modelConfig.num_beams}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] { modelConfig.num_return_sequences}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] { modelConfig.length_penalty}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] { modelConfig.repetition_penalty}, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[]{  50258 , language, 50359, 50363 }, new int[] { 1, 4 } ))
+                 NamedOnnxValue.CreateFromTensor("audio_pcm", new DenseTensor<float>(audio, new[] { 1, audio.Length })),
+                NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] { modelConfig.min_length }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] { modelConfig.num_beams }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] { modelConfig.num_return_sequences }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] { modelConfig.length_penalty }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] { modelConfig.repetition_penalty }, new int[] { 1 })),
+                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[] { 50258, language, 50359, 50363 }, new int[] { 1, 4 }))
                 };
 
             return input;
         }
 
-        public static string Run(WhisperConfig config)
+        public string RunFromFile(WhisperConfig config)
         {
-            // load audio and pad/trim it to fit 30 seconds
             float[] pcmAudioData = LoadAndProcessAudioFile(config.AudioPath, config.SampleRate);
 
             // Run inference
-            using var run_options = new RunOptions();
+            using var runOptions = new RunOptions();
             // Set EP
             using var sessionOptions = config.GetSessionOptionsForEp();
-            
-
-            StringBuilder stringBuilder = new();
 
             using var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
 
+            return Run(config, pcmAudioData, runOptions, session);
+        }
+
+        public string RunRealtime(WhisperConfig config)
+        {
+            var capture = new Capture(config);
+
+            capture.DataAvailable += Capture_DataAvailable;
+
+            capture.Start();
+
+            var N_SAMPLES = 480000;
+            float[] audioDataArray = new float[N_SAMPLES];
+            int position = 0;
+            string temporaryRecognized = string.Empty;
+            string fullText = string.Empty;
+
+            // Define the regular expression that you want to use to split the text into sentences.
+            const string sentenceRegex = @"(?<=[.!?])\s+(?=[A-Za-z-А-Яа-я])";
+
+            // Create a Regex object using the regular expression.
+            var regex = new Regex(sentenceRegex, RegexOptions.Compiled);
+
+            while (true)
+            {
+
+                if (!inProgress && !waitingList.IsEmpty)
+                {
+                    inProgress = true;
+
+                    List<float> audioData = new List<float>();
+
+                    if (waitingList.TryPeek(out AudioDataEventArgs e))
+                    {
+                        while (waitingList.TryTake(out AudioDataEventArgs audioChank))
+                        {
+                            audioData.AddRange(audioChank.AudioData);
+                        }
+
+                        if (audioData.Count + position > N_SAMPLES)
+                        {
+                            position = 0;
+                            audioDataArray = new float[N_SAMPLES];
+                            if (audioData.Count > N_SAMPLES)
+                            {
+                                audioData.Take(N_SAMPLES).ToArray().CopyTo(audioDataArray, position);
+                            }
+                            else
+                            {
+                                audioData.CopyTo(audioDataArray, position);
+                            }
+
+                            fullText += temporaryRecognized;
+
+                            fullText = string.Join("\r\n", regex.Split(fullText));
+
+                        }
+                        else
+                        {
+                            audioData.CopyTo(audioDataArray, position);
+                        }
+
+                        position += audioData.Count + 1;
+                        temporaryRecognized = RunRealrime(e.config, audioDataArray, e.runOptions, e.session);
+
+                        temporaryRecognized = string.Join("\r\n", regex.Split(temporaryRecognized));
+
+                        OnMessageRecognized(new MessageRecognizedEventArgs()
+                        {
+                            RecognizedText = fullText.ToString() + temporaryRecognized
+
+                        });
+                    }
+
+                    inProgress = false;
+                }
+            }
+
+            return MessaeResult;
+        }
+
+        private bool inProgress = false;
+        private ConcurrentBag<AudioDataEventArgs> waitingList = new();
+
+        private void Capture_DataAvailable(object? sender, AudioDataEventArgs e)
+        {
+            waitingList.Add(e);
+        }
+
+        public string RunRealrime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
+        {
+            var input = CreateOnnxWhisperModelInput(config, pcmAudioData);
+            var result = session.Run(input, ["str"], runOptions);
+
+            return (result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty;
+        }
+
+
+        public string Run(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
+        {
+            StringBuilder stringBuilder = new();
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
-                config.Audio = new DenseTensor<float>(audio, new[] { 1, audio.Length });
-                var input = CreateOnnxWhisperModelInput(config);
-                var result = session.Run(input, ["str"], run_options);
+                var input = CreateOnnxWhisperModelInput(config, audio);
+                var result = session.Run(input, ["str"], runOptions);
 
                 stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
+
+                OnMessageRecognized(new MessageRecognizedEventArgs() { RecognizedText = stringBuilder.ToString() });
             }
 
             return stringBuilder.ToString();
@@ -167,7 +280,7 @@ namespace AudioNoteTranscription.Whisper
             var ffmpeg = new FFMpegConverter();
             var output = new MemoryStream();
 
-            var extension = System.IO.Path.GetExtension(file).Substring(1);
+            var extension = Path.GetExtension(file).Substring(1);
 
             // Convert to PCM
             ffmpeg.ConvertMedia(inputFile: file,
@@ -211,7 +324,5 @@ namespace AudioNoteTranscription.Whisper
 
             return result;
         }
-
-
     }
 }

@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:AudioNoteTranscription"
         xmlns:localVM="clr-namespace:AudioNoteTranscription.ViewModel"
         mc:Ignorable="d"
         DataContext="{Binding TranscriptionViewModel, Source={x:Static localVM:ViewModelLocator.Instance}}"
@@ -153,7 +152,7 @@
         <StackPanel 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" Width="514">
+                    VerticalAlignment="Center" Width="663">
 
             <Button x:Name="loadButton"
                     Content="Load" 
@@ -181,7 +180,11 @@
                     Click="loadModelButton_Click" 
                     ClickMode="Press"
                     Style="{StaticResource ActionButtonStyle}"/>
-
+            <ToggleButton x:Name="cloudInference"
+                          Margin="5,10,5,10" 
+                          Content="realtime"
+                          IsChecked="{Binding IsRealtime}"
+                          Style="{StaticResource ToggleButtonStyle}"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <MediaElement x:Name="mediaElement" 
@@ -224,12 +227,14 @@
         </StackPanel>
 
         <TextBox Grid.Row="4" 
-             VerticalAlignment="Stretch" 
              AcceptsReturn="True" 
              TextWrapping="Wrap" 
              Margin="30,10,30,10" 
              Padding="5" 
              ScrollViewer.VerticalScrollBarVisibility="Auto"
-             Text="{Binding Transcription}"/>
+             Text="{Binding Transcription, NotifyOnTargetUpdated=True, Mode=OneWay}" FontSize="14"
+                 TargetUpdated="textTranscriber_TargetUpdated"
+                 Name="textTranscriber"
+             />
     </Grid>
 </Window>
