@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Timers;
 using AudioNoteTranscription.Whisper;
 using Microsoft.ML.OnnxRuntime;
-using Microsoft.VisualBasic;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using Windows.Storage.Streams;
 
 
 namespace AudioNoteTranscription
@@ -41,7 +38,7 @@ namespace AudioNoteTranscription
         {
             this.config = config;
             wasapiLoopbackСapture = InitWasapiLoopbackCapture();
-           // InitWaveIn();
+            //InitWaveIn(); //init mic if neccessary
         }
 
         public void Start()
@@ -53,7 +50,6 @@ namespace AudioNoteTranscription
             // Set EP
             this.sessionOptions = config.GetSessionOptionsForEp();
             this.session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
-
 
             
             wasapiLoopbackСapture.StartRecording();
