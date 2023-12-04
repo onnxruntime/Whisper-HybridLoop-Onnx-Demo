@@ -7,44 +7,54 @@ namespace AudioNoteTranscription.Whisper
 {
     public class WhisperConfig
     {
+
         public enum ExecutionProvider
         {
             DirectML = 0,
             Cuda = 1,
             Cpu = 2,
         }
-        // default props
-        public ExecutionProvider ExecutionProviderTarget = ExecutionProvider.Cpu;
-        public int DeviceId = 0;
 
-        public int min_length = 0;
-        // Max length per inference
-        public int max_length = 448;
-        public float repetition_penalty = 1.0f;
-        public int no_repeat_ngram_size = 1;
-        public int num_beams = 1;
-        public int num_return_sequences = 1;
-        public float length_penalty = 0.2f;
-        public Tensor<int> attention_mask;
-        public DenseTensor<float> audio;
+        private readonly string _modelPath;
+        private ExecutionProvider ExecutionProviderTarget { get; set; } = ExecutionProvider.Cuda;
 
-        public int nFrames = 3000;
-        public int hopLength = 160;
-        public int sampleRate = 16000;
-        public int nMels = 80;
+        public ModelConfig.Config ModelConfig { get; private set; }
+        public string WhisperOnnxPath { get; private set; }
+        public string AudioPath { get; internal set; }
 
-        public string Language = "en";
-        public string WhisperOnnxPath = "";
-        public string TestAudioPath = "";
+        public string Language { get; internal set; }
 
+        public int SampleRate { get; private set; } = 16000;
 
-        public void SetModelPaths()
+        public DenseTensor<float> Audio { get; set; }
+        public int DeviceId { get; private set; } = 0;
+
+        public WhisperConfig(string modelPath, string audioPath, string language)
+        {
+            _modelPath = modelPath;
+            ModelConfig = SetConfig();
+            this.WhisperOnnxPath = SetModelPaths();
+            AudioPath = audioPath;
+            Language = language;
+        }
+
+        private ModelConfig.Config SetConfig()
+        {
+            var configPath = Directory.EnumerateFiles(_modelPath, "*model.json", SearchOption.TopDirectoryOnly).First();
+
+            var jsonString = File.ReadAllText(configPath);
+
+            var config = System.Text.Json.JsonSerializer.Deserialize<ModelConfig.Config>(jsonString);
+
+            return config ?? new ModelConfig.Config();
+        }
+
+        public string SetModelPaths()
         {
             // For some editors the dynamic path doesnt work. If you need to change to a static path
             // update the useStaticPath to true and update the paths below.
 
-            var modelPath = Path.Combine(Directory.GetCurrentDirectory(), "Onnx");
-            WhisperOnnxPath = Directory.EnumerateFiles(modelPath, "*.onnx", SearchOption.AllDirectories).First();
+            return Directory.EnumerateFiles(_modelPath, "*.onnx", SearchOption.AllDirectories).First();
         }
 
 
@@ -72,6 +82,7 @@ namespace AudioNoteTranscription.Whisper
             }
 
             sessionOptions.RegisterOrtExtensions();
+            sessionOptions.EnableCpuMemArena = true;
             return sessionOptions;
 
         }
