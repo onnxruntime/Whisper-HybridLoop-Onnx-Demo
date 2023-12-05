@@ -17,7 +17,7 @@ namespace AudioNoteTranscription.Whisper
     {
         public string RecognizedText { get; set; }
     }
-    public class Inference
+    public partial class Inference
     {
         private string MessaeResult;
         public event EventHandler? MessageRecognized;
@@ -178,11 +178,8 @@ namespace AudioNoteTranscription.Whisper
             string temporaryRecognized = string.Empty;
             string fullText = string.Empty;
 
-            // Define the regular expression that you want to use to split the text into sentences.
-            const string sentenceRegex = @"(?<=[.!?])\s+(?=[A-Za-z-А-Яа-я])";
+           
 
-            // Create a Regex object using the regular expression.
-            var regex = new Regex(sentenceRegex, RegexOptions.Compiled);
 
             while (true)
             {
@@ -206,7 +203,8 @@ namespace AudioNoteTranscription.Whisper
                             audioDataArray = new float[N_SAMPLES];
                             if (audioData.Count > N_SAMPLES)
                             {
-                                audioData.Take(N_SAMPLES).ToArray().CopyTo(audioDataArray, position);
+                                audioDataArray = new float[audioData.Count];
+                                audioData.CopyTo(audioDataArray, position);
                             }
                             else
                             {
@@ -215,7 +213,7 @@ namespace AudioNoteTranscription.Whisper
 
                             fullText += temporaryRecognized;
 
-                            fullText = string.Join("\r\n", regex.Split(fullText));
+                            fullText = SplitToSentences(fullText);
 
                         }
                         else
@@ -226,11 +224,11 @@ namespace AudioNoteTranscription.Whisper
                         position += audioData.Count + 1;
                         temporaryRecognized = RunRealrime(e.config, audioDataArray, e.runOptions, e.session);
 
-                        temporaryRecognized = string.Join("\r\n", regex.Split(temporaryRecognized));
+                        temporaryRecognized = SplitToSentences(temporaryRecognized);
 
                         OnMessageRecognized(new MessageRecognizedEventArgs()
                         {
-                            RecognizedText = fullText.ToString() + temporaryRecognized
+                            RecognizedText = fullText + temporaryRecognized
 
                         });
                     }
@@ -240,6 +238,18 @@ namespace AudioNoteTranscription.Whisper
             }
 
             return MessaeResult;
+        }
+
+        private static string SplitToSentences(string fullText)
+        {
+            // Create a Regex object using the regular expression.
+            var regex = SpliToSentencesRegex();
+
+            fullText = regex.Replace(fullText, delegate (Match match)
+            {
+                return "\r\n";
+            });
+            return fullText;
         }
 
         private bool inProgress = false;
@@ -252,10 +262,15 @@ namespace AudioNoteTranscription.Whisper
 
         public string RunRealrime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
         {
-            var input = CreateOnnxWhisperModelInput(config, pcmAudioData);
-            var result = session.Run(input, ["str"], runOptions);
+            StringBuilder stringBuilder = new();
+            foreach (var audio in pcmAudioData.Chunk(480000))
+            {
+                var input = CreateOnnxWhisperModelInput(config, pcmAudioData);
+                var result = session.Run(input, ["str"], runOptions);
 
-            return (result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty;
+                stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
+            }
+            return stringBuilder.ToString();
         }
 
 
@@ -324,5 +339,9 @@ namespace AudioNoteTranscription.Whisper
 
             return result;
         }
+
+        // Define the regular expression that you want to use to split the text into sentences.
+        [GeneratedRegex(@"(?<=[.!?])\s+(?=[A-Za-z-А-Яа-я])", RegexOptions.Compiled)]
+        private static partial Regex SpliToSentencesRegex();
     }
 }
