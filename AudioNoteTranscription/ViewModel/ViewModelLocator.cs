@@ -1,13 +1,12 @@
 ﻿
 using AudioNoteTranscription.Model;
 
-namespace AudioNoteTranscription.ViewModel
+namespace AudioNoteTranscription.ViewModel;
+
+public class ViewModelLocator
 {
-    public class ViewModelLocator
-    {
-        public static ViewModelLocator Instance { get; } = new ViewModelLocator();
+    private static ViewModelLocator instance = new ViewModelLocator();
+    public static ViewModelLocator Instance { get { return instance; } }
+    public static TranscriptionViewModel TranscriptionViewModel { get; } = new TranscriptionViewModel(new TranscriptionModel());
 
-        public static TranscriptionViewModel TranscriptionViewModel { get; } = new TranscriptionViewModel(new TranscriptionModel());
-
-    }
 }

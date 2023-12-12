@@ -152,7 +152,7 @@
         <StackPanel 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" Width="663">
+                    VerticalAlignment="Center" Width="532">
 
             <Button x:Name="loadButton"
                     Content="Load" 
@@ -160,12 +160,6 @@
                     Click="LoadButton_Click" 
                     ClickMode="Press"
                     Style="{StaticResource ActionButtonStyle}"/>
-            <Button x:Name="transcribeButton"
-                    Content="Transcribe" 
-                    Margin="10" 
-                    ClickMode="Press"
-                    Command="{Binding TranscribeCommand}"
-                    Style="{StaticResource ActionButtonStyle}" />
             <Button x:Name="saveButton"
                     Content="Save" 
                     Margin="10" 
@@ -198,8 +192,7 @@
                         UnloadedBehavior="Stop"/>
         </Grid>
         <StackPanel HorizontalAlignment="Center" 
-                    Grid.Row="2" Orientation="Horizontal">
-
+                    Grid.Row="2" Orientation="Horizontal" Width="497">
             <Button x:Name="seekBackButton"
                     Style="{StaticResource CircularButton}" 
                     FontFamily="{StaticResource SymbolFontFamily}" 
@@ -224,6 +217,16 @@
                     Content="&#xE71A;" 
                     Margin="5"
                     Click="stopButton_Click"/>
+            <Button x:Name="transcribeButton"
+                Content="Transcribe" 
+                ClickMode="Press"
+                Command="{Binding TranscribeCommand}"
+                Style="{StaticResource ActionButtonStyle}" />
+            <Button x:Name="stopTranscribeButton"
+                Content="Stop Transcribe" 
+                ClickMode="Press"
+                Command="{Binding StopCommand}"
+                Style="{StaticResource ActionButtonStyle}" />
         </StackPanel>
 
         <TextBox Grid.Row="4" 

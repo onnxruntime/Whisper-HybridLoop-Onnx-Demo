@@ -1,17 +1,17 @@
 {
     "type": "ONNXModel",
     "config": {
-        "model_path": "E:\\Work\\Dimq1\\source\\OpenAI\\Olive\\examples\\whisper\\models\\conversion-transformers_optimization-onnx_dynamic_quantization-insert_beam_search-prepost\\whisper_cpu_int8_cpu-cpu_model.onnx",
+        "model_path": "D:\\Learnig\\AI\\Olive\\examples\\whisper\\models\\conversion-onnx_dynamic_quantization-insert_beam_search-prepost\\whisper_gpu_int8_gpu-cuda_model.onnx",
         "model_attributes": {
             "vocab_size": 51865,
             "num_mel_bins": 80,
-            "d_model": 768,
-            "encoder_layers": 12,
-            "encoder_attention_heads": 12,
-            "decoder_layers": 12,
-            "decoder_attention_heads": 12,
-            "decoder_ffn_dim": 3072,
-            "encoder_ffn_dim": 3072,
+            "d_model": 384,
+            "encoder_layers": 4,
+            "encoder_attention_heads": 6,
+            "decoder_layers": 4,
+            "decoder_attention_heads": 6,
+            "decoder_ffn_dim": 1536,
+            "encoder_ffn_dim": 1536,
             "dropout": 0.0,
             "attention_dropout": 0.0,
             "activation_dropout": 0.0,
@@ -20,7 +20,7 @@
             "encoder_layerdrop": 0.0,
             "decoder_layerdrop": 0.0,
             "use_cache": true,
-            "num_hidden_layers": 12,
+            "num_hidden_layers": 4,
             "scale_embedding": false,
             "max_source_positions": 1500,
             "max_target_positions": 448,
@@ -156,6 +156,8 @@
                 49870,
                 50254,
                 50258,
+                50358,
+                50359,
                 50360,
                 50361,
                 50362
@@ -185,7 +187,7 @@
             "decoder_start_token_id": 50258,
             "task_specific_params": null,
             "problem_type": null,
-            "_name_or_path": "openai/whisper-small",
+            "_name_or_path": "openai/whisper-tiny",
             "transformers_version": "4.35.2",
             "forced_decoder_ids": [
                 [

@@ -12,7 +12,7 @@ namespace AudioNoteTranscription.ViewModel
         bool redy = true;
         public TranscriptionViewModel(TranscriptionModel model)
         {
-            _modelPath = Directory.GetDirectories(Path.Combine(Directory.GetCurrentDirectory(), "Onnx")).First();
+            _modelPath = Directory.GetDirectories(Path.Combine(Directory.GetCurrentDirectory(), "MlModels")).FirstOrDefault();
             _model = model;
             _model.MessageRecognized += _model_MessageRecognized;
 
@@ -21,7 +21,7 @@ namespace AudioNoteTranscription.ViewModel
             _audioFileName = String.Empty;
 
             _saveCommand = new CommandBase<object>(
-                async (obj) => await _model.StoreTranascription(_noteName, _transcription), (obj) => true);
+                async (obj) => await _model.StoreTranascriptionAsync(_noteName, _transcription), (obj) => true);
             _transcribeCommand = new CommandBase<object>(
                 async (obj) =>
                 {
@@ -33,6 +33,8 @@ namespace AudioNoteTranscription.ViewModel
 
                     redy = true;
                 }, (obj) => redy);
+
+            _stopCommand = new CommandBase<object>(async (obj) =>await _model.StopReognitionAsync(), (obj) => true);
         }
 
         private void _model_MessageRecognized(object? sender, EventArgs e)
@@ -54,6 +56,14 @@ namespace AudioNoteTranscription.ViewModel
         {
             get => _saveCommand;
             set => SetProperty(ref _saveCommand, value);
+        }
+
+        private CommandBase<object> _stopCommand;
+
+        public CommandBase<object> StopCommand
+        {
+            get => _stopCommand;
+            set => SetProperty(ref _stopCommand, value);
         }
 
         private string _transcription;

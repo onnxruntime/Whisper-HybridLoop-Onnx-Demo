@@ -26,28 +26,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Onnx\model.onnx">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\model.onnx">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\whisper-small-ml-float\whisper_cpu_int8_cpu-cpu_model.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\whisper-small-ml-float\whisper_cpu_int8_cpu-cpu_model.onnx">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\whisper-tiny-ml-float\whisper_cpu_int8_cpu-cpu_model.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\whisper-tiny-ml-float\whisper_cpu_int8_cpu-cpu_model.onnx">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
+	  <Folder Include="MlModels\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Onnx\" />
+	  <None Update="MlModels\whisper-tiny\whisper_gpu_int8_gpu-cuda_model.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="MlModels\whisper-tiny\whisper_gpu_int8_gpu-cuda_model.onnx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

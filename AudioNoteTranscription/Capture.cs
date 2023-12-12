@@ -19,7 +19,7 @@ namespace AudioNoteTranscription
         public WhisperConfig config { get; set; }
     }
 
-    public class Capture
+    public class Capture : IDisposable
     {
         public event EventHandler<AudioDataEventArgs>? DataAvailable;
 
@@ -33,6 +33,7 @@ namespace AudioNoteTranscription
 
         private bool inProgress = false;
         private WaveInEvent waveSourceMic;
+        private bool disposedValue;
 
         public Capture(WhisperConfig config)
         {
@@ -51,7 +52,7 @@ namespace AudioNoteTranscription
             this.sessionOptions = config.GetSessionOptionsForEp();
             this.session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
 
-            
+
             wasapiLoopbackСapture.StartRecording();
             waveSourceMic?.StartRecording();
 
@@ -74,7 +75,7 @@ namespace AudioNoteTranscription
 
         private WasapiCapture InitWasapiCapture()
         {
-            
+
             wasapiLoopbackСapture = new WasapiCapture();
             InitCaptuer(wasapiLoopbackСapture);
 
@@ -162,6 +163,33 @@ namespace AudioNoteTranscription
         private static int TimeSpanToSamples(TimeSpan time, WaveFormat waveFormat)
         {
             return (int)(time.TotalSeconds * (double)waveFormat.SampleRate) * waveFormat.Channels;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    wasapiLoopbackСapture?.Dispose();
+                    bufferedWaveProvider?.ClearBuffer();
+                    runOptions?.Dispose();
+                    sessionOptions?.Dispose();
+                    session?.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+        }
+
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -6,17 +6,19 @@ using AudioNoteTranscription.Whisper;
 
 namespace AudioNoteTranscription.Model
 {
-    public class TranscriptionModel: ModelBase
+    public class TranscriptionModel : ModelBase
     {
         private readonly string DESTINATION_FOLDER = "Transcriptions";
 
         public event EventHandler MessageRecognized;
 
+        private Inference? inference = null;
+
         protected virtual void OnMessageRecognized(MessageRecognizedEventArgs e)
         {
             MessageRecognized?.Invoke(this, e);
         }
-        public TranscriptionModel() { } 
+        public TranscriptionModel() { }
 
         //Add await once is all hooked.
         public async Task<string> TranscribeAsync(string audioFilePath, string language, string modelPath, bool isRealtime)
@@ -31,25 +33,23 @@ namespace AudioNoteTranscription.Model
             {
                 var config = new WhisperConfig(modelPath, audioFilePath, language);
 
-                var inference = new Inference();
+                inference = new Inference();
+                var whisperResult = string.Empty;
 
                 inference.MessageRecognized += Inference_MessageRecognized;
                 if (isRealtime)
                 {
-                    var whisperResult = inference.RunRealtime(config);
-                    return whisperResult;
-                    
+                    whisperResult = inference.RunRealtime(config);
                 }
                 else
                 {
-                    var whisperResult = inference.RunFromFile(config);
-                    return whisperResult;
+                    whisperResult = inference.RunFromFile(config);
                 }
-               
+
 
                 inference.MessageRecognized -= Inference_MessageRecognized;
+                return whisperResult;
 
-               
 
             });
             return result;
@@ -61,7 +61,7 @@ namespace AudioNoteTranscription.Model
         }
 
         // Simple file storage for the transcribed note, this can be elaborated with different formats etc.
-        public async Task StoreTranascription(string noteName, string content)
+        public async Task StoreTranascriptionAsync(string noteName, string content)
         {
             await Task.Run(() =>
             {
@@ -76,6 +76,17 @@ namespace AudioNoteTranscription.Model
 
                 File.WriteAllText(path, content);
             });
+        }
+
+        public async Task<bool> StopReognitionAsync()
+        {
+            if (inference?.Stop == false)
+            {
+                this.inference.Stop = true;
+                return await Task.FromResult(true);
+            }
+
+            return await Task.FromResult(false);
         }
     }
 }

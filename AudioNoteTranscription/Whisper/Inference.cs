@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using AudioNoteTranscription.Whisper.ModelConfig;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NReco.VideoConverter;
@@ -19,8 +17,8 @@ namespace AudioNoteTranscription.Whisper
     }
     public partial class Inference
     {
-        private string MessaeResult;
         public event EventHandler? MessageRecognized;
+        private bool stop = false;
 
         protected virtual void OnMessageRecognized(MessageRecognizedEventArgs e)
         {
@@ -128,6 +126,9 @@ namespace AudioNoteTranscription.Whisper
             { "jw", 50356 },
             { "su", 50357 }
         };
+
+        public bool Stop { get => stop; set => stop = value; }
+
         public static List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config, float[] audio)
         {
             // Create a new DenseTensor with the desired shape
@@ -178,12 +179,9 @@ namespace AudioNoteTranscription.Whisper
             string temporaryRecognized = string.Empty;
             string fullText = string.Empty;
 
-           
 
-
-            while (true)
+            while (!Stop)
             {
-
                 if (!inProgress && !waitingList.IsEmpty)
                 {
                     inProgress = true;
@@ -192,7 +190,7 @@ namespace AudioNoteTranscription.Whisper
 
                     if (waitingList.TryPeek(out AudioDataEventArgs e))
                     {
-                        while (waitingList.TryTake(out AudioDataEventArgs audioChank))
+                        while (waitingList.TryDequeue(out AudioDataEventArgs audioChank))
                         {
                             audioData.AddRange(audioChank.AudioData);
                         }
@@ -237,7 +235,14 @@ namespace AudioNoteTranscription.Whisper
                 }
             }
 
-            return MessaeResult;
+            if (!string.IsNullOrEmpty(temporaryRecognized))
+            {
+                fullText += temporaryRecognized;
+
+                fullText = SplitToSentences(fullText);
+            }
+
+            return fullText;
         }
 
         private static string SplitToSentences(string fullText)
@@ -253,11 +258,11 @@ namespace AudioNoteTranscription.Whisper
         }
 
         private bool inProgress = false;
-        private ConcurrentBag<AudioDataEventArgs> waitingList = new();
+        private ConcurrentQueue<AudioDataEventArgs> waitingList = new();
 
         private void Capture_DataAvailable(object? sender, AudioDataEventArgs e)
         {
-            waitingList.Add(e);
+            waitingList.Enqueue(e);
         }
 
         public string RunRealrime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
@@ -266,9 +271,17 @@ namespace AudioNoteTranscription.Whisper
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
                 var input = CreateOnnxWhisperModelInput(config, pcmAudioData);
-                var result = session.Run(input, ["str"], runOptions);
+                try
+                {
+                    var result = session.Run(input, ["str"], runOptions);
 
-                stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
+                    stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
+                }
+                catch
+                {
+
+                }
+                
             }
             return stringBuilder.ToString();
         }
@@ -285,6 +298,11 @@ namespace AudioNoteTranscription.Whisper
                 stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
 
                 OnMessageRecognized(new MessageRecognizedEventArgs() { RecognizedText = stringBuilder.ToString() });
+
+                if (Stop)
+                {
+                    break;
+                }
             }
 
             return stringBuilder.ToString();
