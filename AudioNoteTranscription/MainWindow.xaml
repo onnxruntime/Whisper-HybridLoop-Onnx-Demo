@@ -4,6 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:localVM="clr-namespace:AudioNoteTranscription.ViewModel"
+        xmlns:localExtensions="clr-namespace:AudioNoteTranscription.Extensions"
+        xmlns:localWhisper="clr-namespace:AudioNoteTranscription.Whisper"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         DataContext="{Binding TranscriptionViewModel, Source={x:Static localVM:ViewModelLocator.Instance}}"
         Title="Note Transcript Demo" Height="450" Width="800">
@@ -152,7 +155,7 @@
         <StackPanel 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" Width="532">
+                    VerticalAlignment="Center" Width="703">
 
             <Button x:Name="loadButton"
                     Content="Load" 
@@ -179,6 +182,9 @@
                           Content="realtime"
                           IsChecked="{Binding IsRealtime}"
                           Style="{StaticResource ToggleButtonStyle}"/>
+            <ComboBox Width="102" Height="30"
+                ItemsSource="{Binding Source={localExtensions:EnumBindingSource {x:Type localExtensions:ExecutionProvider}}}"
+                SelectedValue="{Binding SelectedProvider}"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <MediaElement x:Name="mediaElement" 

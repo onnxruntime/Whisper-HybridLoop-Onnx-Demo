@@ -167,7 +167,7 @@ namespace AudioNoteTranscription.Whisper
 
         public string RunRealtime(WhisperConfig config)
         {
-            var capture = new Capture(config);
+            using var capture = new Capture(config);
 
             capture.DataAvailable += Capture_DataAvailable;
 
@@ -281,7 +281,7 @@ namespace AudioNoteTranscription.Whisper
                 {
 
                 }
-                
+
             }
             return stringBuilder.ToString();
         }

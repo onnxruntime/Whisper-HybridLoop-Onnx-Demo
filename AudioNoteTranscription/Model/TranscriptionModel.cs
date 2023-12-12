@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using AudioNoteTranscription.Common;
+using AudioNoteTranscription.Extensions;
 using AudioNoteTranscription.Whisper;
 
 namespace AudioNoteTranscription.Model
@@ -21,7 +22,7 @@ namespace AudioNoteTranscription.Model
         public TranscriptionModel() { }
 
         //Add await once is all hooked.
-        public async Task<string> TranscribeAsync(string audioFilePath, string language, string modelPath, bool isRealtime)
+        public async Task<string> TranscribeAsync(string audioFilePath, string language, string modelPath, bool isRealtime, ExecutionProvider executionProviderTarget)
         {
             // check file was selected.
             if (string.IsNullOrEmpty(audioFilePath) && !isRealtime)
@@ -31,7 +32,7 @@ namespace AudioNoteTranscription.Model
 
             var result = await Task.Run(string () =>
             {
-                var config = new WhisperConfig(modelPath, audioFilePath, language);
+                var config = new WhisperConfig(modelPath, audioFilePath, language, executionProviderTarget);
 
                 inference = new Inference();
                 var whisperResult = string.Empty;
@@ -83,6 +84,7 @@ namespace AudioNoteTranscription.Model
             if (inference?.Stop == false)
             {
                 this.inference.Stop = true;
+                
                 return await Task.FromResult(true);
             }
 

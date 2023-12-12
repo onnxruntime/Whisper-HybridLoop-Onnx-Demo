@@ -34,6 +34,7 @@ namespace AudioNoteTranscription
         private bool inProgress = false;
         private WaveInEvent waveSourceMic;
         private bool disposedValue;
+        private Timer timer;
 
         public Capture(WhisperConfig config)
         {
@@ -58,7 +59,7 @@ namespace AudioNoteTranscription
 
             // устанавливаем метод обратного вызова
             // создаем таймер
-            Timer timer = new Timer(TimeSpan.FromSeconds(1));
+            this.timer = new Timer(TimeSpan.FromSeconds(1));
             timer.Elapsed += OnAudioData;
             timer.Start();
         }
@@ -171,11 +172,17 @@ namespace AudioNoteTranscription
             {
                 if (disposing)
                 {
+                    timer.Stop();
+                    timer.Dispose();
+                    wasapiLoopbackСapture.StopRecording();
                     wasapiLoopbackСapture?.Dispose();
                     bufferedWaveProvider?.ClearBuffer();
-                    runOptions?.Dispose();
-                    sessionOptions?.Dispose();
+                    
                     session?.Dispose();
+                    sessionOptions?.Close();
+                    sessionOptions?.Dispose();
+                    runOptions?.Close();
+                    runOptions?.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

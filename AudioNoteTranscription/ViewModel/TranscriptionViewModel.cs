@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using AudioNoteTranscription.Common;
+using AudioNoteTranscription.Extensions;
 using AudioNoteTranscription.Model;
 using AudioNoteTranscription.Whisper;
 
@@ -28,7 +29,7 @@ namespace AudioNoteTranscription.ViewModel
                     redy = false;
                     Transcription = String.Empty;
 
-                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath, IsRealtime);
+                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath, IsRealtime, selectedProvider);
 
 
                     redy = true;
@@ -123,5 +124,9 @@ namespace AudioNoteTranscription.ViewModel
             get => _isRealtime;
             set => SetProperty(ref _isRealtime, value);
         }
+
+        private ExecutionProvider selectedProvider = ExecutionProvider.Cpu;
+
+        public ExecutionProvider SelectedProvider { get => selectedProvider; set => SetProperty(ref selectedProvider, value); } 
     }
 }

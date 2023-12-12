@@ -1,22 +1,16 @@
 ﻿using System.IO;
 using System.Linq;
+using AudioNoteTranscription.Extensions;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace AudioNoteTranscription.Whisper
 {
-    public class WhisperConfig
+    public partial class WhisperConfig
     {
 
-        public enum ExecutionProvider
-        {
-            DirectML = 0,
-            Cuda = 1,
-            Cpu = 2,
-        }
-
         private readonly string _modelPath;
-        private ExecutionProvider ExecutionProviderTarget { get; set; } = ExecutionProvider.Cuda;
+        private ExecutionProvider ExecutionProviderTarget { get; set; }
 
         public ModelConfig.Config ModelConfig { get; private set; }
         public string WhisperOnnxPath { get; private set; }
@@ -29,13 +23,14 @@ namespace AudioNoteTranscription.Whisper
         public DenseTensor<float> Audio { get; set; }
         public int DeviceId { get; private set; } = 0;
 
-        public WhisperConfig(string modelPath, string audioPath, string language)
+        public WhisperConfig(string modelPath, string audioPath, string language, ExecutionProvider executionProviderTarget = ExecutionProvider.Cpu)
         {
             _modelPath = modelPath;
             ModelConfig = SetConfig();
-            this.WhisperOnnxPath = SetModelPaths();
+            WhisperOnnxPath = SetModelPaths();
             AudioPath = audioPath;
             Language = language;
+            ExecutionProviderTarget = executionProviderTarget;
         }
 
         private ModelConfig.Config SetConfig()
@@ -64,12 +59,12 @@ namespace AudioNoteTranscription.Whisper
 
             switch (ExecutionProviderTarget)
             {
-                case ExecutionProvider.DirectML:
-                    sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-                    sessionOptions.EnableMemoryPattern = false;
-                    sessionOptions.AppendExecutionProvider_DML(DeviceId);
-                    sessionOptions.AppendExecutionProvider_CPU();
-                    break;
+                //case ExecutionProvider.DirectML:
+                //    sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                //    //sessionOptions.EnableMemoryPattern = false;
+                //    sessionOptions.AppendExecutionProvider_DML(DeviceId);
+                //    //sessionOptions.AppendExecutionProvider_CPU();
+                //    break;
                 case ExecutionProvider.Cpu:
                     sessionOptions.AppendExecutionProvider_CPU();
                     break;
