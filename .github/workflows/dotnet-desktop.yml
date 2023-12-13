@@ -35,7 +35,7 @@ jobs:
          release_name="App-$tag"
 
          # Build everything
-         dotnet publish AudioNoteTranscription/AudioNoteTranscription.csproj --framework net8.0 --runtime "win-x64" -c Release -o "$release_name"
+         dotnet publish AudioNoteTranscription/AudioNoteTranscription.csproj -c Release -o "$release_name"
 
          # Pack to zip for Windows
            7z a -tzip "${release_name}.zip" "./${release_name}/*"
