@@ -138,7 +138,7 @@ namespace AudioNoteTranscription.Whisper
             var modelConfig = config.ModelConfig.config.model_attributes;
 
             var input = new List<NamedOnnxValue> {
-                 NamedOnnxValue.CreateFromTensor("audio_pcm", new DenseTensor<float>(audio, new[] { 1, audio.Length })),
+                NamedOnnxValue.CreateFromTensor("audio_pcm", new DenseTensor<float>(audio, new[] { 1, audio.Length })),
                 NamedOnnxValue.CreateFromTensor("min_length", new DenseTensor<int>(new int[] { modelConfig.min_length }, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length }, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("num_beams", new DenseTensor<int>(new int[] { modelConfig.num_beams }, new int[] { 1 })),
@@ -167,7 +167,14 @@ namespace AudioNoteTranscription.Whisper
 
         public string RunRealtime(WhisperConfig config)
         {
-            using var capture = new Capture(config);
+
+            // Run inference
+            using var runOptions = new RunOptions();
+            // Set EP
+            using var sessionOptions = config.GetSessionOptionsForEp();
+            using var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
+
+            using var capture = new Capture();
 
             capture.DataAvailable += Capture_DataAvailable;
 
@@ -220,7 +227,7 @@ namespace AudioNoteTranscription.Whisper
                         }
 
                         position += audioData.Count + 1;
-                        temporaryRecognized = RunRealrime(e.config, audioDataArray, e.runOptions, e.session);
+                        temporaryRecognized = RunRealrime(config, audioDataArray, runOptions, session);
 
                         temporaryRecognized = SplitToSentences(temporaryRecognized);
 

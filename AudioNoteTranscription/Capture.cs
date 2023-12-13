@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Timers;
-using AudioNoteTranscription.Whisper;
-using Microsoft.ML.OnnxRuntime;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -12,11 +10,6 @@ namespace AudioNoteTranscription
     public class AudioDataEventArgs : EventArgs
     {
         public float[] AudioData { get; set; }
-        public RunOptions runOptions { get; set; }
-        public SessionOptions sessionOptions { get; set; }
-        public InferenceSession session { get; set; }
-
-        public WhisperConfig config { get; set; }
     }
 
     public class Capture : IDisposable
@@ -26,34 +19,20 @@ namespace AudioNoteTranscription
         private WasapiCapture wasapiLoopbackСapture;
 
         private BufferedWaveProvider? bufferedWaveProvider;
-        private WhisperConfig config;
-        private RunOptions runOptions;
-        private SessionOptions sessionOptions;
-        private InferenceSession session;
 
         private bool inProgress = false;
         private WaveInEvent waveSourceMic;
         private bool disposedValue;
         private Timer timer;
 
-        public Capture(WhisperConfig config)
+        public Capture()
         {
-            this.config = config;
             wasapiLoopbackСapture = InitWasapiLoopbackCapture();
             //InitWaveIn(); //init mic if neccessary
         }
 
         public void Start()
         {
-
-
-            // Run inference
-            this.runOptions = new RunOptions();
-            // Set EP
-            this.sessionOptions = config.GetSessionOptionsForEp();
-            this.session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
-
-
             wasapiLoopbackСapture.StartRecording();
             waveSourceMic?.StartRecording();
 
@@ -128,9 +107,6 @@ namespace AudioNoteTranscription
             };
         }
 
-
-
-
         private void OnAudioData(object? sender, ElapsedEventArgs e)
         {
 
@@ -152,10 +128,6 @@ namespace AudioNoteTranscription
                 DataAvailable?.Invoke(this, new AudioDataEventArgs()
                 {
                     AudioData = frames,
-                    runOptions = runOptions,
-                    session = session,
-                    sessionOptions = sessionOptions,
-                    config = config
                 });
             }
 
@@ -177,12 +149,6 @@ namespace AudioNoteTranscription
                     wasapiLoopbackСapture.StopRecording();
                     wasapiLoopbackСapture?.Dispose();
                     bufferedWaveProvider?.ClearBuffer();
-                    
-                    session?.Dispose();
-                    sessionOptions?.Close();
-                    sessionOptions?.Dispose();
-                    runOptions?.Close();
-                    runOptions?.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
