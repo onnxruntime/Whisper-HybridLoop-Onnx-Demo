@@ -10,7 +10,12 @@ Before beginning, ensure that you have the following:
 
 1. Download Whisper-Tiny-Model from [here](https://huggingface.co/openai/whisper-tiny.en)
 2. Follow the Olive tutorial for optimization [here](https://github.com/microsoft/Olive/tree/main/examples/whisper#whisper-optimization-using-ort-toolchain)
-3. Get an OpenAI key to be able to test the cloud inference if there is cloud connectivity.
+or
+Dowload converted model from [here](https://huggingface.co/DzmitryShchamialiou)
+3. Install Cuda 12.3 toolkit from [Nvidia](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
+4. Install Cudnn for cuda 12.3 from [Nvidia](https://developer.nvidia.com/rdp/cudnn-archive)
+
+   Here a good example  [how to install Cuda and Cudnn](https://medium.com/analytics-vidhya/installing-cuda-and-cudnn-on-windows-d44b8e9876b5). In that example is legacy version but approach is the same.
 
 ### Installation
 
@@ -20,6 +25,8 @@ Clone the repository to your local machine with:
 git clone https://github.com/onnxruntime/Whisper-HybridLoop-Onnx-Demo.git
 
 ```
+or 
+just download compiled version from Release.
 
 ## Optimization Setup
 
