@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace AudioNoteTranscription.Whisper.ModelConfig
 {
@@ -88,6 +89,9 @@ namespace AudioNoteTranscription.Whisper.ModelConfig
         public string transformers_version { get; set; }
         public List<List<int>> forced_decoder_ids { get; set; }
         public string model_type { get; set; }
+
+        [JsonPropertyName("_name_or_path")]
+        public string NameOrPath { get; set; }
     }
 
 

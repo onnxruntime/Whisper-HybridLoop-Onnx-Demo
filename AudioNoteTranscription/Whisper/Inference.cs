@@ -145,8 +145,17 @@ namespace AudioNoteTranscription.Whisper
                 NamedOnnxValue.CreateFromTensor("num_return_sequences", new DenseTensor<int>(new int[] { modelConfig.num_return_sequences }, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("length_penalty", new DenseTensor<float>(new float[] { modelConfig.length_penalty }, new int[] { 1 })),
                 NamedOnnxValue.CreateFromTensor("repetition_penalty", new DenseTensor<float>(new float[] { modelConfig.repetition_penalty }, new int[] { 1 })),
-                NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[] { 50258, language, 50359, 50363 }, new int[] { 1, 4 }))
                 };
+
+
+            if(string.Equals(modelConfig.NameOrPath ,"openai/whisper-large-v3", StringComparison.OrdinalIgnoreCase))
+            {
+                input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[] { 50258, language, 50360, 50364 }, new int[] { 1, 4 })));
+            }
+            else
+            {
+                input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(new int[] { 50258, language, 50359, 50363 }, new int[] { 1, 4 })));
+            }
 
             return input;
         }
