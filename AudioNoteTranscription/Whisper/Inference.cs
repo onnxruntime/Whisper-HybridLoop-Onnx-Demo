@@ -149,14 +149,14 @@ namespace AudioNoteTranscription.Whisper
                 };
 
 
-            int[] inputParameters = null;
+            int[]? inputParameters = null;
 
             if (string.Equals(modelConfig.NameOrPath, "openai/whisper-large-v3", StringComparison.OrdinalIgnoreCase))
             {
                 //50365 - 51865
 
 
-                inputParameters = new int[] {
+                inputParameters = [
                     50258,
                     language,
                     50359,  //translate
@@ -166,18 +166,18 @@ namespace AudioNoteTranscription.Whisper
                     //50363,  //nospeech
                     //50364,  //notimestamps
                     //50365,     //<|0.00|>
-                };
+                ];
             }
             else
             {
-                inputParameters = new int[] {
+                inputParameters = [
                     50258,
                     language,
                     50358,  //translate
                     50359,  //transcribe
                     //50363,  //notimestamps
                     //50364,     //<|0.00|>
-                };
+                ];
             }
 
             input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(inputParameters, new int[] { 1, inputParameters.Length })));
