@@ -165,7 +165,7 @@ namespace AudioNoteTranscription.Whisper
                     //50362,  //startofprev
                     //50363,  //nospeech
                     //50364,  //notimestamps
-                    //50365,     //<|0.00|>
+                    50365,     //<|0.00|>
                 ];
             }
             else
@@ -175,8 +175,8 @@ namespace AudioNoteTranscription.Whisper
                     language,
                     //50358,  //translate
                     50359,  //transcribe
-                    //50363,  //notimestamps
-                    //50364,     //<|0.00|>
+                            // 50363,  //notimestamps
+                    50364,     //<|0.00|>
                 ];
             }
 
@@ -313,6 +313,19 @@ namespace AudioNoteTranscription.Whisper
             return fullText;
         }
 
+        private static string SplitToTimeStamps(string fullText, float startTime)
+        {
+            // Create a Regex object using the regular expression.
+            var regex = SpliToTimeRegex();
+
+            fullText = regex.Replace(fullText, delegate (Match match)
+            {
+                var time = float.Parse(match.Groups["time"].Value) + startTime;
+                return "\r\n" + TimeSpan.FromSeconds(time) + "\r\n";
+            });
+            return fullText;
+        }
+
         private bool inProgress = false;
         private ConcurrentQueue<AudioDataEventArgs> waitingList = new();
 
@@ -345,14 +358,19 @@ namespace AudioNoteTranscription.Whisper
 
         public string Run(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
         {
+            float startTime = 0f;
             StringBuilder stringBuilder = new();
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
                 var input = CreateOnnxWhisperModelInput(config, audio);
                 var result = session.Run(input, ["str"], runOptions);
 
-                stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
-
+                var recognizedText = SplitToTimeStamps((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty, startTime);
+                
+                stringBuilder.Append(recognizedText);
+                
+                startTime += 30f;
+                
                 OnMessageRecognized(new MessageRecognizedEventArgs() { RecognizedText = stringBuilder.ToString() });
 
                 if (Stop)
@@ -417,5 +435,9 @@ namespace AudioNoteTranscription.Whisper
         // Define the regular expression that you want to use to split the text into sentences.
         [GeneratedRegex(@"(?<=[.!?])\s+(?=[A-Za-z-А-Яа-я])", RegexOptions.Compiled)]
         private static partial Regex SpliToSentencesRegex();
+
+        // Define the regular expression that you want to use to split the text into sentences.
+        [GeneratedRegex(@"<\|(?'time'\d+\.\d+)\|>", RegexOptions.Compiled)]
+        private static partial Regex SpliToTimeRegex();
     }
 }
