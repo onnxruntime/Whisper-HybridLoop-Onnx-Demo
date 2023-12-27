@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using AudioNoteTranscription.Extensions;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NReco.VideoConverter;
@@ -258,7 +259,7 @@ namespace AudioNoteTranscription.Whisper
                             fullText = SplitToSentences(fullText);
 
                             temporaryRecognized = string.Empty;
-                          
+
                             OnMessageRecognized(new MessageRecognizedEventArgs()
                             {
                                 RecognizedText = fullText
@@ -273,10 +274,8 @@ namespace AudioNoteTranscription.Whisper
 
                         position += audioData.Count + 1;
 
-                        Debug.WriteLine($"audioDataArray {audioDataArray.Length}, position {position}");
-
                         var realtimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
-                        
+
                         if (realtimeRecognizedText.Length > temporaryRecognized.Length - 5)
                         {
                             temporaryRecognized = SplitToSentences(realtimeRecognizedText);
@@ -345,11 +344,11 @@ namespace AudioNoteTranscription.Whisper
         public string RunRealtime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
         {
             StringBuilder stringBuilder = new();
-            foreach (var audio in pcmAudioData.Chunk(480000))
+            foreach (var audio in pcmAudioData.ChunkViaMemory(480000))
             {
-                var audioData = audio;
+                var audioData = audio.ToArray();
 
-                if(audioData.Length > 480000)
+                if (audioData.Length > 480000)
                 {
                     Array.Resize(ref audioData, 480000);
                 }
@@ -388,11 +387,11 @@ namespace AudioNoteTranscription.Whisper
                 var result = session.Run(input, ["str"], runOptions);
 
                 var recognizedText = SplitToTimeStamps((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty, startTime);
-                
+
                 stringBuilder.Append(recognizedText);
-                
+
                 startTime += 30f;
-                
+
                 OnMessageRecognized(new MessageRecognizedEventArgs() { RecognizedText = stringBuilder.ToString() });
 
                 if (Stop)
