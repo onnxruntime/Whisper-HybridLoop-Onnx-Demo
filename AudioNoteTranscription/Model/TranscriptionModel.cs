@@ -47,12 +47,11 @@ namespace AudioNoteTranscription.Model
                     whisperResult = inference.RunFromFile(config);
                 }
 
-
                 inference.MessageRecognized -= Inference_MessageRecognized;
+                
                 return whisperResult;
-
-
             });
+
             return result;
         }
 

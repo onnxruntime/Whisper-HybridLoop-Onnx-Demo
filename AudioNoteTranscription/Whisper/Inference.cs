@@ -155,7 +155,6 @@ namespace AudioNoteTranscription.Whisper
             {
                 //50365 - 51865
 
-
                 inputParameters = [
                     50258,
                     language,
@@ -181,7 +180,7 @@ namespace AudioNoteTranscription.Whisper
             }
 
             input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(inputParameters, new int[] { 1, inputParameters.Length })));
-            input.Add(NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length + inputParameters.Length }, new int[] { 1 })));
+            input.Add(NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length }, new int[] { 1 })));
 
             return input;
         }
@@ -254,18 +253,21 @@ namespace AudioNoteTranscription.Whisper
                                 audioData.CopyTo(audioDataArray, position);
                             }
 
-                            Debug.WriteLine($"fullText audioDataArray {audioDataArray.Length}, position {position}");
-
                             fullText += temporaryRecognized;
 
                             fullText = SplitToSentences(fullText);
 
                             temporaryRecognized = string.Empty;
+                          
+                            OnMessageRecognized(new MessageRecognizedEventArgs()
+                            {
+                                RecognizedText = fullText
+
+                            });
 
                         }
                         else
                         {
-                            Debug.WriteLine($"audioData.CopyTo audioDataArray {audioDataArray.Length}, position {position}");
                             audioData.CopyTo(audioDataArray, position);
                         }
 
@@ -273,11 +275,11 @@ namespace AudioNoteTranscription.Whisper
 
                         Debug.WriteLine($"audioDataArray {audioDataArray.Length}, position {position}");
 
-                        var realrimeRecognizedText = RunRealrime(config, audioDataArray, runOptions, session);
-
-                        if (realrimeRecognizedText.Length > temporaryRecognized.Length - 5)
+                        var realtimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
+                        
+                        if (realtimeRecognizedText.Length > temporaryRecognized.Length - 5)
                         {
-                            temporaryRecognized = SplitToSentences(realrimeRecognizedText);
+                            temporaryRecognized = SplitToSentences(realtimeRecognizedText);
                         }
 
                         OnMessageRecognized(new MessageRecognizedEventArgs()
@@ -313,6 +315,12 @@ namespace AudioNoteTranscription.Whisper
             return fullText;
         }
 
+        private static string RemoveTimeStamps(string fullText)
+        {
+            // Create a Regex object using the regular expression.
+            return SpliToTimeRegex().Replace(fullText, string.Empty);
+        }
+
         private static string SplitToTimeStamps(string fullText, float startTime)
         {
             // Create a Regex object using the regular expression.
@@ -334,12 +342,19 @@ namespace AudioNoteTranscription.Whisper
             waitingList.Enqueue(e);
         }
 
-        public string RunRealrime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
+        public string RunRealtime(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
         {
             StringBuilder stringBuilder = new();
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
-                var input = CreateOnnxWhisperModelInput(config, pcmAudioData);
+                var audioData = audio;
+
+                if(audioData.Length > 480000)
+                {
+                    Array.Resize(ref audioData, 480000);
+                }
+
+                var input = CreateOnnxWhisperModelInput(config, audioData);
                 try
                 {
                     var result = session.Run(input, ["str"], runOptions);
@@ -362,7 +377,14 @@ namespace AudioNoteTranscription.Whisper
             StringBuilder stringBuilder = new();
             foreach (var audio in pcmAudioData.Chunk(480000))
             {
-                var input = CreateOnnxWhisperModelInput(config, audio);
+                var audioData = audio;
+
+                if (audioData.Length > 480000)
+                {
+                    Array.Resize(ref audioData, 480000);
+                }
+
+                var input = CreateOnnxWhisperModelInput(config, audioData);
                 var result = session.Run(input, ["str"], runOptions);
 
                 var recognizedText = SplitToTimeStamps((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty, startTime);
