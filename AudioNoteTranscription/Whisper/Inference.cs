@@ -10,6 +10,7 @@ using AudioNoteTranscription.Extensions;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NReco.VideoConverter;
+using Windows.ApplicationModel.VoiceCommands;
 
 namespace AudioNoteTranscription.Whisper
 {
@@ -17,10 +18,21 @@ namespace AudioNoteTranscription.Whisper
     {
         public string RecognizedText { get; set; }
     }
-    public partial class Inference
+    public partial class Inference : IDisposable
     {
         public event EventHandler? MessageRecognized;
+        public Capture? Capture => capture;
         private bool stop = false;
+
+        public Inference(bool isRealtime)
+        {
+            if (isRealtime)
+            {
+                this.capture = new Capture();
+
+                capture.DataAvailable += Capture_DataAvailable;
+            }
+        }
 
         protected virtual void OnMessageRecognized(MessageRecognizedEventArgs e)
         {
@@ -130,6 +142,9 @@ namespace AudioNoteTranscription.Whisper
         };
 
         public bool Stop { get => stop; set => stop = value; }
+        public string FullText { get => fullText; set => fullText = value; }
+
+        private string fullText = string.Empty;
 
         public static List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config, float[] audio)
         {
@@ -200,7 +215,7 @@ namespace AudioNoteTranscription.Whisper
             return Run(config, pcmAudioData, runOptions, session);
         }
 
-        public string RunRealtime(WhisperConfig config)
+        public string RunRealtime(WhisperConfig config, bool isMic, bool isLoopback)
         {
 
             // Run inference
@@ -209,22 +224,26 @@ namespace AudioNoteTranscription.Whisper
             using var sessionOptions = config.GetSessionOptionsForEp();
             using var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
 
-            using var capture = new Capture();
+            capture?.Start();
 
-            capture.DataAvailable += Capture_DataAvailable;
+            if (isLoopback)
+            {
+                capture?.StartLoopback();
+            }
 
-            capture.Start();
+            if (isMic)
+            {
+                capture?.StartMic();
+            }
 
             var N_SAMPLES = 480000;
             float[] audioDataArray = new float[N_SAMPLES];
             int position = 0;
             string temporaryRecognized = string.Empty;
-            string fullText = string.Empty;
-
 
             while (!Stop)
             {
-                if (!inProgress && !waitingList.IsEmpty)
+                if (!waitingList.IsEmpty)
                 {
                     inProgress = true;
 
@@ -254,9 +273,7 @@ namespace AudioNoteTranscription.Whisper
                                 audioData.CopyTo(audioDataArray, position);
                             }
 
-                            fullText += temporaryRecognized;
-
-                            fullText = SplitToSentences(fullText);
+                            fullText += SplitInToSentences(temporaryRecognized);
 
                             temporaryRecognized = string.Empty;
 
@@ -265,7 +282,6 @@ namespace AudioNoteTranscription.Whisper
                                 RecognizedText = fullText
 
                             });
-
                         }
                         else
                         {
@@ -274,11 +290,11 @@ namespace AudioNoteTranscription.Whisper
 
                         position += audioData.Count + 1;
 
-                        var realtimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
+                        var realTimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
 
-                        if (realtimeRecognizedText.Length > temporaryRecognized.Length - 5)
+                        if (realTimeRecognizedText.Length > temporaryRecognized.Length - 5)
                         {
-                            temporaryRecognized = SplitToSentences(realtimeRecognizedText);
+                            temporaryRecognized = SplitInToSentences(realTimeRecognizedText);
                         }
 
                         OnMessageRecognized(new MessageRecognizedEventArgs()
@@ -287,8 +303,6 @@ namespace AudioNoteTranscription.Whisper
 
                         });
                     }
-
-                    inProgress = false;
                 }
             }
 
@@ -296,13 +310,13 @@ namespace AudioNoteTranscription.Whisper
             {
                 fullText += temporaryRecognized;
 
-                fullText = SplitToSentences(fullText);
+                fullText = SplitInToSentences(fullText);
             }
 
             return fullText;
         }
 
-        private static string SplitToSentences(string fullText)
+        private static string SplitInToSentences(string fullText)
         {
             // Create a Regex object using the regular expression.
             var regex = SpliToSentencesRegex();
@@ -317,6 +331,7 @@ namespace AudioNoteTranscription.Whisper
         private static string RemoveTimeStamps(string fullText)
         {
             // Create a Regex object using the regular expression.
+
             return SpliToTimeRegex().Replace(fullText, string.Empty);
         }
 
@@ -335,6 +350,8 @@ namespace AudioNoteTranscription.Whisper
 
         private bool inProgress = false;
         private ConcurrentQueue<AudioDataEventArgs> waitingList = new();
+        private Capture? capture;
+        private bool disposedValue;
 
         private void Capture_DataAvailable(object? sender, AudioDataEventArgs e)
         {
@@ -368,7 +385,6 @@ namespace AudioNoteTranscription.Whisper
             }
             return stringBuilder.ToString();
         }
-
 
         public string Run(WhisperConfig config, float[] pcmAudioData, RunOptions runOptions, InferenceSession session)
         {
@@ -460,5 +476,35 @@ namespace AudioNoteTranscription.Whisper
         // Define the regular expression that you want to use to split the text into sentences.
         [GeneratedRegex(@"<\|(?'time'\d+\.\d+)\|>", RegexOptions.Compiled)]
         private static partial Regex SpliToTimeRegex();
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    capture?.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~Inference()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

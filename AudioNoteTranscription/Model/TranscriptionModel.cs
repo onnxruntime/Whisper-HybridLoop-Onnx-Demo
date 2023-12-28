@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AudioNoteTranscription.Common;
 using AudioNoteTranscription.Extensions;
 using AudioNoteTranscription.Whisper;
+using Windows.Networking.NetworkOperators;
 
 namespace AudioNoteTranscription.Model
 {
@@ -22,37 +23,35 @@ namespace AudioNoteTranscription.Model
         public TranscriptionModel() { }
 
         //Add await once is all hooked.
-        public async Task<string> TranscribeAsync(string audioFilePath, string language, string modelPath, bool isRealtime, ExecutionProvider executionProviderTarget)
+        public Task TranscribeAsync(WhisperConfig whisperConfig, bool isRealtime, bool isMic, bool isLoopback)
         {
             // check file was selected.
-            if (string.IsNullOrEmpty(audioFilePath) && !isRealtime)
+            if (!string.IsNullOrEmpty(whisperConfig.AudioPath) || isRealtime)
             {
-                return String.Empty;
+                return Task.Run(string () =>
+                  {
+                      var config = whisperConfig;
+
+                      inference = new Inference(isRealtime);
+                      var whisperResult = string.Empty;
+
+                      inference.MessageRecognized += Inference_MessageRecognized;
+                      if (isRealtime)
+                      {
+                          whisperResult = inference.RunRealtime(config, isMic, isLoopback);
+                      }
+                      else
+                      {
+                          whisperResult = inference.RunFromFile(config);
+                      }
+
+                      inference.MessageRecognized -= Inference_MessageRecognized;
+
+                      return whisperResult;
+                  });
             }
 
-            var result = await Task.Run(string () =>
-            {
-                var config = new WhisperConfig(modelPath, audioFilePath, language, executionProviderTarget);
-
-                inference = new Inference();
-                var whisperResult = string.Empty;
-
-                inference.MessageRecognized += Inference_MessageRecognized;
-                if (isRealtime)
-                {
-                    whisperResult = inference.RunRealtime(config);
-                }
-                else
-                {
-                    whisperResult = inference.RunFromFile(config);
-                }
-
-                inference.MessageRecognized -= Inference_MessageRecognized;
-                
-                return whisperResult;
-            });
-
-            return result;
+            return Task.CompletedTask;
         }
 
         private void Inference_MessageRecognized(object? sender, EventArgs e)
@@ -78,16 +77,45 @@ namespace AudioNoteTranscription.Model
             });
         }
 
-        public async Task<bool> StopReognitionAsync()
+        public async Task<bool> StopRecognitionAsync()
         {
             if (inference?.Stop == false)
             {
                 this.inference.Stop = true;
-                
+
                 return await Task.FromResult(true);
             }
 
             return await Task.FromResult(false);
         }
+
+        public void StopMic()
+        {
+            inference?.Capture?.StopMic();
+        }
+
+        public void StartMic()
+        {
+            inference?.Capture?.StartMic();
+        }
+
+        public void StopLoopback()
+        {
+            inference?.Capture?.StopLoopback();
+        }
+
+        public void StartLoopback()
+        {
+            inference?.Capture?.StartLoopback();
+        }
+
+        public void ClearText()
+        {
+            if (inference != null)
+            {
+                inference.FullText = string.Empty;
+            }
+        }
+
     }
 }

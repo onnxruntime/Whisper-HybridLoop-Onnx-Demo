@@ -82,5 +82,7 @@ namespace AudioNoteTranscription
         {
             textTranscriber.ScrollToEnd();
         }
+
+       
     }
 }

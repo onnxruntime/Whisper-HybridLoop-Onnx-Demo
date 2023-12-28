@@ -13,7 +13,12 @@ namespace AudioNoteTranscription.ViewModel
         bool redy = true;
         public TranscriptionViewModel(TranscriptionModel model)
         {
-            _modelPath = Directory.GetDirectories(Path.Combine(Directory.GetCurrentDirectory(), "MlModels")).FirstOrDefault();
+            var modelPath = Path.Combine(Directory.GetCurrentDirectory(), "MlModels");
+            if (Directory.Exists(modelPath))
+            {
+                _modelPath = Directory.GetDirectories(modelPath).FirstOrDefault();
+            }
+
             _model = model;
             _model.MessageRecognized += _model_MessageRecognized;
 
@@ -29,13 +34,44 @@ namespace AudioNoteTranscription.ViewModel
                     redy = false;
                     Transcription = String.Empty;
 
-                    Transcription = await _model.TranscribeAsync(_audioFileName, _selectedLanguage, _modelPath, IsRealtime, selectedProvider);
+                    var config = new WhisperConfig(_modelPath, _audioFileName, _selectedLanguage, selectedProvider);
 
+                    await _model.TranscribeAsync(config, IsRealtime, IsMic, IsLoopBack);
 
                     redy = true;
                 }, (obj) => redy);
 
-            _stopCommand = new CommandBase<object>(async (obj) =>await _model.StopReognitionAsync(), (obj) => true);
+            _stopCommand = new CommandBase<object>(async (obj) => await _model.StopRecognitionAsync(), (obj) => true);
+
+            _loopbackCommand = new CommandBase<object>((state) =>
+            {
+                if (state != null && Convert.ToBoolean(state) == true)
+                {
+                    model.StartLoopback();
+                }
+                else
+                {
+                    model.StopLoopback();
+                }
+            }, (obj) => true);
+
+            _micCommand = new CommandBase<object>((state) =>
+            {
+                if (state != null && Convert.ToBoolean(state) == true)
+                {
+                    model.StartMic();
+
+                }
+                else
+                {
+                    model.StopMic();
+                }
+            }, (obj) => true);
+
+            _clearTextCommand = new CommandBase<object>((state) =>
+            {
+                _model.ClearText();
+            }, (obj) => true);
         }
 
         private void _model_MessageRecognized(object? sender, EventArgs e)
@@ -117,7 +153,7 @@ namespace AudioNoteTranscription.ViewModel
             set => SetProperty(ref _modelPath, value);
         }
 
-        private bool _isRealtime;
+        private bool _isRealtime = true;
 
         public bool IsRealtime
         {
@@ -125,8 +161,48 @@ namespace AudioNoteTranscription.ViewModel
             set => SetProperty(ref _isRealtime, value);
         }
 
+        private bool _isMic;
+
+        public bool IsMic
+        {
+            get => _isMic;
+            set => SetProperty(ref _isMic, value);
+        }
+
+        private bool _isLoopback = true;
+
+        public bool IsLoopBack
+        {
+            get => _isLoopback;
+            set => SetProperty(ref _isLoopback, value);
+        }
+
         private ExecutionProvider selectedProvider = ExecutionProvider.Cpu;
 
-        public ExecutionProvider SelectedProvider { get => selectedProvider; set => SetProperty(ref selectedProvider, value); } 
+        public ExecutionProvider SelectedProvider { get => selectedProvider; set => SetProperty(ref selectedProvider, value); }
+
+        private CommandBase<object> _micCommand;
+
+        public CommandBase<object> MicCommand
+        {
+            get => _micCommand;
+            set => SetProperty(ref _micCommand, value);
+        }
+
+        private CommandBase<object> _loopbackCommand;
+
+        public CommandBase<object> LoopbackCommand
+        {
+            get => _loopbackCommand;
+            set => SetProperty(ref _loopbackCommand, value);
+        }
+
+        private CommandBase<object> _clearTextCommand;
+
+        public CommandBase<object> ClearTextCommand
+        {
+            get => _clearTextCommand;
+            set => SetProperty(ref _clearTextCommand, value);
+        }
     }
 }

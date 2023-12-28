@@ -9,7 +9,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         DataContext="{Binding TranscriptionViewModel, Source={x:Static localVM:ViewModelLocator.Instance}}"
-        Title="Note Transcript Demo" Height="450" Width="800">
+        Title="Note Transcript Demo" Height="450" Width="870">
     <Window.Resources>
         <Style TargetType="TextBlock" x:Key="HeaderTextBlockStyle">
             <Setter Property="FontSize" Value="18" />
@@ -144,18 +144,22 @@
         </Style>
     </Window.Resources>
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel 
+            Grid.Row="1" Grid.ColumnSpan="2"
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" Width="703">
+                    VerticalAlignment="Center" Width="829">
 
             <Button x:Name="loadButton"
                     Content="Load" 
@@ -185,6 +189,8 @@
             <ComboBox Width="102" Height="30"
                 ItemsSource="{Binding Source={localExtensions:EnumBindingSource {x:Type localExtensions:ExecutionProvider}}}"
                 SelectedValue="{Binding SelectedProvider}"/>
+            <CheckBox Content="Microfone" Width="78" Height="17" Margin="10,10,5,10" Command="{Binding MicCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" IsChecked="{Binding IsMic}" />
+            <CheckBox Content="Output" Width="78" Height="17" Margin="5,10,10,10" Command="{Binding LoopbackCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" IsChecked="{Binding IsLoopBack}"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <MediaElement x:Name="mediaElement" 
@@ -198,7 +204,8 @@
                         UnloadedBehavior="Stop"/>
         </Grid>
         <StackPanel HorizontalAlignment="Center" 
-                    Grid.Row="2" Orientation="Horizontal" Width="497">
+                    Grid.Row="2" 
+                    Orientation="Horizontal" Width="246" Margin="0,0,0,5">
             <Button x:Name="seekBackButton"
                     Style="{StaticResource CircularButton}" 
                     FontFamily="{StaticResource SymbolFontFamily}" 
@@ -223,19 +230,26 @@
                     Content="&#xE71A;" 
                     Margin="5"
                     Click="stopButton_Click"/>
-            <Button x:Name="transcribeButton"
-                Content="Transcribe" 
-                ClickMode="Press"
-                Command="{Binding TranscribeCommand}"
-                Style="{StaticResource ActionButtonStyle}" />
-            <Button x:Name="stopTranscribeButton"
-                Content="Stop Transcribe" 
-                ClickMode="Press"
-                Command="{Binding StopCommand}"
-                Style="{StaticResource ActionButtonStyle}" />
-        </StackPanel>
 
-        <TextBox Grid.Row="4" 
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center">
+            <Button x:Name="transcribeButton"
+                    Content="Transcribe" 
+                    ClickMode="Press"
+                    Command="{Binding TranscribeCommand}"
+                    Style="{StaticResource ActionButtonStyle}" />
+            <Button x:Name="stopTranscribeButton"
+                    Content="Stop Transcribe" 
+                    ClickMode="Press"
+                    Command="{Binding StopCommand}"
+                    Style="{StaticResource ActionButtonStyle}" />
+            <Button x:Name="clearText"
+                    Content="Clear Text" 
+                    ClickMode="Press"
+                    Command="{Binding ClearTextCommand}"
+                    Style="{StaticResource ActionButtonStyle}" />
+        </StackPanel>
+        <TextBox Grid.Row="3" Grid.ColumnSpan="2"
              AcceptsReturn="True" 
              TextWrapping="Wrap" 
              Margin="30,10,30,10" 
