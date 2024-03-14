@@ -23,7 +23,7 @@ namespace AudioNoteTranscription.Model
         public TranscriptionModel() { }
 
         //Add await once is all hooked.
-        public Task TranscribeAsync(WhisperConfig whisperConfig, bool isRealtime, bool isMic, bool isLoopback)
+        public Task TranscribeAsync(WhisperConfig whisperConfig, bool isRealtime, bool isMic, bool isLoopback, bool isTranslate)
         {
             // check file was selected.
             if (!string.IsNullOrEmpty(whisperConfig.AudioPath) || isRealtime)
@@ -34,6 +34,8 @@ namespace AudioNoteTranscription.Model
 
                       inference = new Inference(isRealtime);
                       var whisperResult = string.Empty;
+
+                      inference.Translate = isTranslate;
 
                       inference.MessageRecognized += Inference_MessageRecognized;
                       if (isRealtime)
@@ -113,7 +115,16 @@ namespace AudioNoteTranscription.Model
         {
             if (inference != null)
             {
+                inference.ClearText = true;
                 inference.FullText = string.Empty;
+            }
+        }
+
+        public void SetTranslate(bool isTranslate)
+        {
+            if (inference != null)
+            {
+                inference.Translate = isTranslate;
             }
         }
 

@@ -9,7 +9,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         DataContext="{Binding TranscriptionViewModel, Source={x:Static localVM:ViewModelLocator.Instance}}"
-        Title="Note Transcript Demo" Height="450" Width="870">
+        Title="Note Transcript Demo" Height="450" Width="1035">
     <Window.Resources>
         <Style TargetType="TextBlock" x:Key="HeaderTextBlockStyle">
             <Setter Property="FontSize" Value="18" />
@@ -159,7 +159,7 @@
             Grid.Row="1" Grid.ColumnSpan="2"
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" Width="829">
+                    VerticalAlignment="Center" Width="920">
 
             <Button x:Name="loadButton"
                     Content="Load" 
@@ -191,6 +191,7 @@
                 SelectedValue="{Binding SelectedProvider}"/>
             <CheckBox Content="Microfone" Width="78" Height="17" Margin="10,10,5,10" Command="{Binding MicCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" IsChecked="{Binding IsMic}" />
             <CheckBox Content="Output" Width="78" Height="17" Margin="5,10,10,10" Command="{Binding LoopbackCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" IsChecked="{Binding IsLoopBack}"/>
+            <CheckBox Content="Translate" Width="78" Height="17" IsChecked="{Binding IsTranslate}"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <MediaElement x:Name="mediaElement" 
@@ -201,7 +202,8 @@
                         MinWidth="400" 
                         Margin="10" 
                         LoadedBehavior="Manual"
-                        UnloadedBehavior="Stop"/>
+                        UnloadedBehavior="Stop"
+                           MediaFailed="mediaElement_MediaFailed"/>
         </Grid>
         <StackPanel HorizontalAlignment="Center" 
                     Grid.Row="2" 

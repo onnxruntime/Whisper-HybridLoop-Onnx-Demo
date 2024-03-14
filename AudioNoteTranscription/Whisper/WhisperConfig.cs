@@ -16,7 +16,7 @@ namespace AudioNoteTranscription.Whisper
         public string WhisperOnnxPath { get; private set; }
         public string AudioPath { get; internal set; }
 
-        public string Language { get; internal set; }
+        public string Language { get; set; }
 
         public int SampleRate { get; private set; } = 16000;
 
@@ -75,9 +75,10 @@ namespace AudioNoteTranscription.Whisper
                     sessionOptions.AppendExecutionProvider_CPU();
                     break;
             }
-
+            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.RegisterOrtExtensions();
             sessionOptions.EnableCpuMemArena = true;
+            sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
             return sessionOptions;
 
         }

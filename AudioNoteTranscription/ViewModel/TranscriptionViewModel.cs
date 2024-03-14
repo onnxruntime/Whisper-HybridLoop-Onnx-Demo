@@ -10,6 +10,7 @@ namespace AudioNoteTranscription.ViewModel
 {
     public class TranscriptionViewModel : ModelBase
     {
+        WhisperConfig whisperConfig;
         bool redy = true;
         public TranscriptionViewModel(TranscriptionModel model)
         {
@@ -34,9 +35,9 @@ namespace AudioNoteTranscription.ViewModel
                     redy = false;
                     Transcription = String.Empty;
 
-                    var config = new WhisperConfig(_modelPath, _audioFileName, _selectedLanguage, selectedProvider);
+                    whisperConfig = new WhisperConfig(_modelPath, _audioFileName, _selectedLanguage, selectedProvider);
 
-                    await _model.TranscribeAsync(config, IsRealtime, IsMic, IsLoopBack);
+                    await _model.TranscribeAsync(whisperConfig, IsRealtime, IsMic, IsLoopBack, IsTranslate);
 
                     redy = true;
                 }, (obj) => redy);
@@ -140,7 +141,15 @@ namespace AudioNoteTranscription.ViewModel
         public string SelectedLanguage
         {
             get => _selectedLanguage;
-            set => SetProperty(ref _selectedLanguage, value);
+            set
+            {
+                SetProperty(ref _selectedLanguage, value);
+
+                if (whisperConfig != null && whisperConfig.Language != value)
+                {
+                    whisperConfig.Language = value;
+                }
+            }
         }
 
         public string[] Languages => Inference.ALL_LANGUAGE_TOKENS.Keys.ToArray();
@@ -167,6 +176,18 @@ namespace AudioNoteTranscription.ViewModel
         {
             get => _isMic;
             set => SetProperty(ref _isMic, value);
+        }
+
+        private bool _isTranslate;
+
+        public bool IsTranslate
+        {
+            get => _isTranslate;
+            set
+            {
+                SetProperty(ref _isTranslate, value);
+                Model.SetTranslate(value);
+            }
         }
 
         private bool _isLoopback = true;

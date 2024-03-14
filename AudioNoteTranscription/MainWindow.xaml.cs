@@ -83,6 +83,9 @@ namespace AudioNoteTranscription
             textTranscriber.ScrollToEnd();
         }
 
-       
+        private void mediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+
+        }
     }
 }

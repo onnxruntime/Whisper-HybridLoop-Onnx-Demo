@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,7 +9,8 @@ using AudioNoteTranscription.Extensions;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NReco.VideoConverter;
-using Windows.ApplicationModel.VoiceCommands;
+using SileroVad;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AudioNoteTranscription.Whisper
 {
@@ -20,6 +20,8 @@ namespace AudioNoteTranscription.Whisper
     }
     public partial class Inference : IDisposable
     {
+        private static readonly Vad vad = new();
+
         public event EventHandler? MessageRecognized;
         public Capture? Capture => capture;
         private bool stop = false;
@@ -142,11 +144,15 @@ namespace AudioNoteTranscription.Whisper
         };
 
         public bool Stop { get => stop; set => stop = value; }
+
+        public bool ClearText { get; set; } = false;
         public string FullText { get => fullText; set => fullText = value; }
+
+        public bool Translate { get; set; } = false;
 
         private string fullText = string.Empty;
 
-        public static List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config, float[] audio)
+        public List<NamedOnnxValue> CreateOnnxWhisperModelInput(WhisperConfig config, Memory<float> audio)
         {
             // Create a new DenseTensor with the desired shape
 
@@ -174,25 +180,39 @@ namespace AudioNoteTranscription.Whisper
                 inputParameters = [
                     50258,
                     language,
-                    //50359,  //translate
-                    50360,  //transcribe
                     //50361,  //startoflm
                     //50362,  //startofprev
-                    //50363,  //nospeech
+                    50363,  //nospeech
                     //50364,  //notimestamps
                     50365,     //<|0.00|>
                 ];
+
+                if (Translate)
+                {
+                    inputParameters = [..inputParameters, 50359]; //translate
+                }
+                else
+                {
+                    inputParameters = [.. inputParameters, 50360]; //transcribe
+                }
             }
             else
             {
                 inputParameters = [
                     50258,
                     language,
-                    //50358,  //translate
-                    50359,  //transcribe
-                            // 50363,  //notimestamps
-                    50364,     //<|0.00|>
+                    50363,     //nospeech
+                    50365,     //<|0.00|>
                 ];
+
+                if (Translate)
+                {
+                    inputParameters = [.. inputParameters, 50358]; //translate
+                }
+                else
+                {
+                    inputParameters = [.. inputParameters, 50359]; //transcribe
+                }
             }
 
             input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(inputParameters, new int[] { 1, inputParameters.Length })));
@@ -215,11 +235,20 @@ namespace AudioNoteTranscription.Whisper
             return Run(config, pcmAudioData, runOptions, session);
         }
 
+        public float[] MergeUsingBlockCopy(float[] firstArray, float[] secondArray)
+        {
+            var combinedArray = new float[firstArray.Length + secondArray.Length];
+            firstArray.CopyTo(combinedArray, 0);
+            secondArray.CopyTo(combinedArray, firstArray.Length);
+            return combinedArray;
+        }
+
         public string RunRealtime(WhisperConfig config, bool isMic, bool isLoopback)
         {
 
             // Run inference
             using var runOptions = new RunOptions();
+
             // Set EP
             using var sessionOptions = config.GetSessionOptionsForEp();
             using var session = new InferenceSession(config.WhisperOnnxPath, sessionOptions);
@@ -243,65 +272,73 @@ namespace AudioNoteTranscription.Whisper
 
             while (!Stop)
             {
+                if (ClearText)
+                {
+                    ClearText = false;
+
+                    fullText = string.Empty;
+                    temporaryRecognized = string.Empty;
+                    audioDataArray = new float[N_SAMPLES];
+                    waitingList.Clear();
+                }
+
+
                 if (!waitingList.IsEmpty)
                 {
                     inProgress = true;
 
-                    List<float> audioData = new List<float>();
-
                     if (waitingList.TryPeek(out AudioDataEventArgs e))
                     {
+                        float[] audioData = null;
+
                         while (waitingList.TryDequeue(out AudioDataEventArgs audioChank))
                         {
-                            if (Array.Exists(audioChank.AudioData, a => a != 0f))
+                            if (audioData == null)
                             {
-                                audioData.AddRange(audioChank.AudioData);
+                                audioData = audioChank.AudioData;
                             }
+                            else
+                            {
+                                audioData = MergeUsingBlockCopy(audioData, audioChank.AudioData);
+                            }
+
                         }
 
-                        if (audioData.Count + position > N_SAMPLES - 50000)
+                        List<VadSpeech> result = vad.GetSpeechTimestamps(audioData, min_silence_duration_ms: 500, threshold: 0.4f);
+
+                        if (result.Count > 0 && audioData != null)
                         {
-                            position = 0;
-                            audioDataArray = new float[N_SAMPLES];
-                            if (audioData.Count > N_SAMPLES)
+                            if (audioData.Length + position > N_SAMPLES)
                             {
-                                audioDataArray = new float[audioData.Count];
-                                audioData.CopyTo(audioDataArray, position);
+                                temporaryRecognized = SaveResultOfRecognition(N_SAMPLES, out audioDataArray, out position, temporaryRecognized, audioData);
                             }
                             else
                             {
                                 audioData.CopyTo(audioDataArray, position);
                             }
+                            position += audioData.Length;
 
-                            fullText += SplitInToSentences(temporaryRecognized);
 
-                            temporaryRecognized = string.Empty;
+                            var realTimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
 
-                            OnMessageRecognized(new MessageRecognizedEventArgs()
+                            if (!string.IsNullOrWhiteSpace(realTimeRecognizedText) && temporaryRecognized.Length < realTimeRecognizedText.Length)
                             {
-                                RecognizedText = fullText
+                                temporaryRecognized = SplitInToSentences(realTimeRecognizedText);
+                            }
+                            else
+                            {
+                                SaveResultOfRecognition(N_SAMPLES, out audioDataArray, out position, temporaryRecognized, audioData);
+                                temporaryRecognized = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
+                            }
 
-                            });
+
+                            OnMessageRecognized(
+                                new MessageRecognizedEventArgs()
+                                {
+                                    RecognizedText = fullText + temporaryRecognized
+
+                                });
                         }
-                        else
-                        {
-                            audioData.CopyTo(audioDataArray, position);
-                        }
-
-                        position += audioData.Count + 1;
-
-                        var realTimeRecognizedText = RemoveTimeStamps(RunRealtime(config, audioDataArray, runOptions, session));
-
-                        if (realTimeRecognizedText.Length > temporaryRecognized.Length - 5)
-                        {
-                            temporaryRecognized = SplitInToSentences(realTimeRecognizedText);
-                        }
-
-                        OnMessageRecognized(new MessageRecognizedEventArgs()
-                        {
-                            RecognizedText = fullText + temporaryRecognized
-
-                        });
                     }
                 }
             }
@@ -314,6 +351,27 @@ namespace AudioNoteTranscription.Whisper
             }
 
             return fullText;
+        }
+
+        private string SaveResultOfRecognition(int N_SAMPLES, out float[] audioDataArray, out int position, string temporaryRecognized, float[] audioData)
+        {
+            position = 0;
+            audioDataArray = audioData.Length > N_SAMPLES ? new float[audioData.Length] : new float[N_SAMPLES];
+
+            audioData.CopyTo(audioDataArray, position);
+
+
+            fullText += SplitInToSentences(temporaryRecognized);
+
+            temporaryRecognized = string.Empty;
+
+            OnMessageRecognized(
+                new MessageRecognizedEventArgs()
+                {
+                    RecognizedText = fullText
+
+                });
+            return temporaryRecognized;
         }
 
         private static string SplitInToSentences(string fullText)
@@ -363,21 +421,14 @@ namespace AudioNoteTranscription.Whisper
             StringBuilder stringBuilder = new();
             foreach (var audio in pcmAudioData.ChunkViaMemory(480000))
             {
-                var audioData = audio.ToArray();
-
-                if (audioData.Length > 480000)
-                {
-                    Array.Resize(ref audioData, 480000);
-                }
-
-                var input = CreateOnnxWhisperModelInput(config, audioData);
+                var input = CreateOnnxWhisperModelInput(config, audio);
                 try
                 {
                     var result = session.Run(input, ["str"], runOptions);
 
                     stringBuilder.Append((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty);
                 }
-                catch
+                catch (Exception ex)
                 {
 
                 }
@@ -390,16 +441,9 @@ namespace AudioNoteTranscription.Whisper
         {
             float startTime = 0f;
             StringBuilder stringBuilder = new();
-            foreach (var audio in pcmAudioData.Chunk(480000))
+            foreach (var audio in pcmAudioData.ChunkViaMemory(480000))
             {
-                var audioData = audio;
-
-                if (audioData.Length > 480000)
-                {
-                    Array.Resize(ref audioData, 480000);
-                }
-
-                var input = CreateOnnxWhisperModelInput(config, audioData);
+                var input = CreateOnnxWhisperModelInput(config, audio);
                 var result = session.Run(input, ["str"], runOptions);
 
                 var recognizedText = SplitToTimeStamps((result.FirstOrDefault()?.Value as IEnumerable<string>)?.First() ?? string.Empty, startTime);
