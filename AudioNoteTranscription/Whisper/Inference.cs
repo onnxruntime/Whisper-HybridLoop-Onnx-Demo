@@ -189,7 +189,7 @@ namespace AudioNoteTranscription.Whisper
 
                 if (Translate)
                 {
-                    inputParameters = [..inputParameters, 50359]; //translate
+                    inputParameters = [.. inputParameters, 50359]; //translate
                 }
                 else
                 {
@@ -214,6 +214,8 @@ namespace AudioNoteTranscription.Whisper
                     inputParameters = [.. inputParameters, 50359]; //transcribe
                 }
             }
+
+            Array.Sort(inputParameters);
 
             input.Add(NamedOnnxValue.CreateFromTensor("decoder_input_ids", new DenseTensor<int>(inputParameters, new int[] { 1, inputParameters.Length })));
             input.Add(NamedOnnxValue.CreateFromTensor("max_length", new DenseTensor<int>(new int[] { modelConfig.max_length }, new int[] { 1 })));
@@ -281,7 +283,6 @@ namespace AudioNoteTranscription.Whisper
                     audioDataArray = new float[N_SAMPLES];
                     waitingList.Clear();
                 }
-
 
                 if (!waitingList.IsEmpty)
                 {
