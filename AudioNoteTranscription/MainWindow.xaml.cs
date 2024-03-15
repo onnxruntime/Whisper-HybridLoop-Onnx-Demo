@@ -1,19 +1,8 @@
-﻿using AudioNoteTranscription.ViewModel;
-using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using AudioNoteTranscription.ViewModel;
+using Microsoft.Win32;
 
 namespace AudioNoteTranscription
 {
@@ -37,6 +26,7 @@ namespace AudioNoteTranscription
         {
             var openFileDialog = new OpenFileDialog
             {
+                DefaultDirectory = AppDomain.CurrentDomain.BaseDirectory,
             };
 
             if (openFileDialog.ShowDialog() == true)
@@ -72,5 +62,30 @@ namespace AudioNoteTranscription
             mediaElement.Position -= TimeSpan.FromSeconds(10);
         }
         #endregion
+
+        private void loadModelButton_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFolderDialog
+            {
+                 DefaultDirectory = AppDomain.CurrentDomain.BaseDirectory,
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                //send file to the viewmodel
+                string folderPath = openFileDialog.FolderName;
+                ((TranscriptionViewModel)DataContext).ModelPath = folderPath;
+            }
+        }
+
+        private void textTranscriber_TargetUpdated(object sender, System.Windows.Data.DataTransferEventArgs e)
+        {
+            textTranscriber.ScrollToEnd();
+        }
+
+        private void mediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+
+        }
     }
 }

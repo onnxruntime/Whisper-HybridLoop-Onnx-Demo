@@ -1,45 +1,68 @@
-﻿using AudioNoteTranscription.Common;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using AudioNoteTranscription.Common;
+using AudioNoteTranscription.Extensions;
 using AudioNoteTranscription.Whisper;
-using static System.Net.Mime.MediaTypeNames;
+using Windows.Networking.NetworkOperators;
 
 namespace AudioNoteTranscription.Model
 {
-    public class TranscriptionModel: ModelBase
+    public class TranscriptionModel : ModelBase
     {
         private readonly string DESTINATION_FOLDER = "Transcriptions";
-        public TranscriptionModel() { } 
+
+        public event EventHandler MessageRecognized;
+
+        private Inference? inference = null;
+
+        protected virtual void OnMessageRecognized(MessageRecognizedEventArgs e)
+        {
+            MessageRecognized?.Invoke(this, e);
+        }
+        public TranscriptionModel() { }
 
         //Add await once is all hooked.
-        public async Task<string> TranscribeAsync(string audioFilePath, bool useCloudInference)
+        public Task TranscribeAsync(WhisperConfig whisperConfig, bool isRealtime, bool isMic, bool isLoopback, bool isTranslate)
         {
             // check file was selected.
-            if (string.IsNullOrEmpty(audioFilePath))
+            if (!string.IsNullOrEmpty(whisperConfig.AudioPath) || isRealtime)
             {
-                return String.Empty;
+                return Task.Run(string () =>
+                  {
+                      var config = whisperConfig;
+
+                      inference = new Inference(isRealtime);
+                      var whisperResult = string.Empty;
+
+                      inference.Translate = isTranslate;
+
+                      inference.MessageRecognized += Inference_MessageRecognized;
+                      if (isRealtime)
+                      {
+                          whisperResult = inference.RunRealtime(config, isMic, isLoopback);
+                      }
+                      else
+                      {
+                          whisperResult = inference.RunFromFile(config);
+                      }
+
+                      inference.MessageRecognized -= Inference_MessageRecognized;
+
+                      return whisperResult;
+                  });
             }
 
-            var result = await Task.Run(string () =>
-            {
-                var config = new WhisperConfig();
-                config.SetModelPaths();
-                config.TestAudioPath = audioFilePath;
+            return Task.CompletedTask;
+        }
 
-                var whisperResult = Whisper.Inference.Run(config, useCloudInference);
-                Console.WriteLine(whisperResult);
-                return whisperResult;
-
-            });
-            return result;
+        private void Inference_MessageRecognized(object? sender, EventArgs e)
+        {
+            OnMessageRecognized(e as MessageRecognizedEventArgs);
         }
 
         // Simple file storage for the transcribed note, this can be elaborated with different formats etc.
-        public async Task StoreTranascription(string noteName, string content)
+        public async Task StoreTranascriptionAsync(string noteName, string content)
         {
             await Task.Run(() =>
             {
@@ -54,8 +77,56 @@ namespace AudioNoteTranscription.Model
 
                 File.WriteAllText(path, content);
             });
-
-            return;
         }
+
+        public async Task<bool> StopRecognitionAsync()
+        {
+            if (inference?.Stop == false)
+            {
+                this.inference.Stop = true;
+
+                return await Task.FromResult(true);
+            }
+
+            return await Task.FromResult(false);
+        }
+
+        public void StopMic()
+        {
+            inference?.Capture?.StopMic();
+        }
+
+        public void StartMic()
+        {
+            inference?.Capture?.StartMic();
+        }
+
+        public void StopLoopback()
+        {
+            inference?.Capture?.StopLoopback();
+        }
+
+        public void StartLoopback()
+        {
+            inference?.Capture?.StartLoopback();
+        }
+
+        public void ClearText()
+        {
+            if (inference != null)
+            {
+                inference.ClearText = true;
+                inference.FullText = string.Empty;
+            }
+        }
+
+        public void SetTranslate(bool isTranslate)
+        {
+            if (inference != null)
+            {
+                inference.Translate = isTranslate;
+            }
+        }
+
     }
 }

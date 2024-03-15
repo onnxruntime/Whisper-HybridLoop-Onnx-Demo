@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<NoWarn>NU1605</NoWarn>
@@ -16,18 +16,26 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Azure" Version="1.15.0-rc" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Extensions" Version="0.8.0-beta" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.15.0-rc" />
-		<PackageReference Include="NReco.VideoConverter" Version="1.2.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Extensions" Version="0.10.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.17.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu.Windows" Version="1.17.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.1" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
+		<PackageReference Include="NAudio.Core" Version="2.2.1" />
+		<PackageReference Include="NReco.VideoConverter" Version="1.2.1" />
+		<PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+		<PackageReference Include="SileroVad" Version="1.1.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Onnx\model.onnx">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Onnx\whisper_cpu_int8_model.onnx">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  <Folder Include="MlModels\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="appsettings.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
 
